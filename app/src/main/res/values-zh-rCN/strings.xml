@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ota_version">OTA版本</string>
+    <string name="region">地区</string>
+    <string name="mode">模式</string>
+    <string name="query">查询</string>
+    <string name="china">中国</string>
+    <string name="europe">欧洲</string>
+    <string name="india">印度</string>
+    <string name="singapore">新加坡</string>
+    <string name="status">状态</string>
+    <string name="os_version">系统版本</string>
+    <string name="security_patch">安全补丁</string>
+    <string name="published_time">发布时间</string>
+    <string name="android_version">安卓版本</string>
+    <string name="packet_url">链接</string>
+    <string name="packet_size">大小</string>
+    <string name="packet_name">名称</string>
+    <string name="update_log">更新日志</string>
+    <string name="msg_no_update_available">无可用更新</string>
+    <string name="copied">已复制到粘贴板</string>
+    <string name="msg_query_success">查询成功！</string>
+    <string name="version_type">类型</string>
+    <string name="version_name">版本名</string>
+    <string name="proxy">代理</string>
+    <string name="software_version">软件版本</string>
+    <string name="model">型号</string>
+    <string name="russia">俄罗斯</string>
+    <string name="turkey">土耳其</string>
+    <string name="thailand">泰国</string>
+    <string name="global">全球</string>
+</resources>

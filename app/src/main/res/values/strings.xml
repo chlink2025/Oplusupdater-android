@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name" translatable="false">Updater</string>
+    <string name="ota_version">OTA Version</string>
+    <string name="region">Region</string>
+    <string name="mode">Mode</string>
+    <string name="query">Query</string>
+    <string name="china">China</string>
+    <string name="europe">Europe</string>
+    <string name="india">India</string>
+    <string name="singapore">Singapore</string>
+    <string name="status">Status</string>
+    <string name="os_version">Os Version</string>
+    <string name="security_patch">Security Patch</string>
+    <string name="published_time">Published Time</string>
+    <string name="android_version">Android Version</string>
+    <string name="packet_url">Download Url</string>
+    <string name="packet_size">Size</string>
+    <string name="packet_md5" translatable="false">MD5</string>
+    <string name="packet_name">Name</string>
+    <string name="update_log">Update Log</string>
+    <string name="msg_no_update_available">No update available</string>
+    <string name="copied">Copied</string>
+    <string name="msg_query_success">Query success!</string>
+    <string name="version_type">Type</string>
+    <string name="version_name">Version Name</string>
+    <string name="proxy">Proxy</string>
+    <string name="software_version">Software version</string>
+    <string name="model">Model</string>
+    <string name="carrier" translatable="false">NvCarrier</string>
+    <string name="russia">Russia</string>
+    <string name="turkey">Turkey</string>
+    <string name="thailand">Thailand</string>
+    <string name="global">Global</string>
+</resources>
