@@ -1,0 +1,77 @@
+name: Android CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**/*.md'
+  pull_request:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**/*.md'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Set up golang/mobile
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile@latest
+
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26d
+          local-cache: true
+
+      - name: Build go bindings
+        working-directory: OplusUpdater
+        run: |
+          pwd
+          go get golang.org/x/mobile/bind
+          gomobile init
+          CGO_CFLAGS="-O2 -g0" CGO_LDFLAGS="-s" gomobile bind -tags "no_debug" -target=android -androidapi 26 -v ./pkg/updater
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle
+        run: ./gradlew assemble
+
+#      - uses: r0adkll/sign-android-release@v1
+#        id: sign_app
+#        with:
+#          releaseDirectory: app/build/outputs/apk/release
+#          signingKeyBase64: ${{ secrets.SIGNING_KEY_BASE64 }}
+#          alias: ${{ secrets.SIGNING_ALIAS }}
+#          keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+#          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+#        env:
+#          BUILD_TOOLS_VERSION: "35.0.0"
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apps
+          path: app/build/outputs/apk/**/*-signed.apk
+          overwrite: true
+          if-no-files-found: error
