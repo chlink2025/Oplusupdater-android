@@ -80,10 +80,6 @@ val systemOtaVersion: String by lazy {
     method.invoke(clazz, "ro.build.version.ota", "") as String
 }
 
-val simpleSystemOtaVersion: String by lazy {
-    systemOtaVersion.split(".").dropLast(1).joinToString(".")
-}
-
 @Composable
 fun HomeScreen() {
     val context = LocalContext.current
@@ -94,7 +90,7 @@ fun HomeScreen() {
 
     var isQuerying by rememberSaveable { mutableStateOf(false) }
     var expandMoreParameters by rememberSaveable { mutableStateOf(true) }
-    var otaVersion by rememberSaveable { mutableStateOf(simpleSystemOtaVersion) }
+    var otaVersion by rememberSaveable { mutableStateOf(systemOtaVersion) }
     var model by rememberSaveable { mutableStateOf("") }
     var carrier by rememberSaveable { mutableStateOf("") }
     var otaRegion by rememberSaveable { mutableStateOf(OtaRegion.CN) }
