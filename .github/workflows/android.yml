@@ -42,6 +42,7 @@ jobs:
         run: |
           pwd
           go get golang.org/x/mobile/bind
+          go build -o ~ ./cmd/updater
           gomobile init
           CGO_CFLAGS="-O2 -g0" CGO_LDFLAGS="-s" gomobile bind -tags "no_debug" -target=android -androidapi 26 -v ./pkg/updater
 
@@ -75,3 +76,11 @@ jobs:
           path: app/build/outputs/apk/**/*.apk
           overwrite: true
           if-no-files-found: error
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater
+          path: ~/updater
+          overwrite: true
+          if-no-files-found: error
+
