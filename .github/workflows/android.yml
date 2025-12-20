@@ -41,6 +41,7 @@ jobs:
         working-directory: OplusUpdater
         run: |
           pwd
+          go mod tidy
           go get golang.org/x/mobile/bind
           go build -o ~ ./cmd/updater
           gomobile init
