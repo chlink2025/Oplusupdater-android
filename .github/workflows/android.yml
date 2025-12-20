@@ -41,9 +41,10 @@ jobs:
         working-directory: OplusUpdater
         run: |
           pwd
+          rm go.sum
           go mod tidy
-          go get golang.org/x/mobile/bind
           go build -o ~ ./cmd/updater
+          go get golang.org/x/mobile/bind
           gomobile init
           CGO_CFLAGS="-O2 -g0" CGO_LDFLAGS="-s" gomobile bind -tags "no_debug" -target=android -androidapi 26 -v ./pkg/updater
 
