@@ -59,7 +59,7 @@ func QueryUpdate(args *QueryUpdateArgs) (*ResponseResult, error) {
 		deviceId = GenerateDeviceId(args.IMEI)
 	}
 
-	requestUrl := url.URL{Host: config.Host, Scheme: "https", Path: "/update/v5"}
+	requestUrl := url.URL{Host: config.Host, Scheme: "https", Path: "/update/v6"}
 	requestHeaders := map[string]string{
 		"language":       config.Language,
 		"androidVersion": "unknown",
