@@ -96,6 +96,14 @@ fun HomeScreen() {
     var otaRegion by rememberSaveable { mutableStateOf(OtaRegion.CN) }
     var responseResult by remember { mutableStateOf<ResponseResult?>(null) }
     val msgFlow = MutableSharedFlow<String>()
+    
+    // History state
+    var historyList by remember { mutableStateOf(emptyList<com.houvven.oplusupdater.utils.HistoryUtils.HistoryItem>()) }
+    
+    // Load history on start
+    LaunchedEffect(Unit) {
+        historyList = com.houvven.oplusupdater.utils.HistoryUtils.getHistory(context)
+    }
 
     LaunchedEffect(otaVersion, otaRegion) {
         otaVersion.split("_").firstOrNull()?.let {
@@ -134,7 +142,7 @@ fun HomeScreen() {
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = "Updater",
+                title = stringResource(R.string.app_name),
                 actions = {
                     IconButton(onClick = {
                         showAboutInfoDialog = true
@@ -220,6 +228,25 @@ fun HomeScreen() {
                     otaRegion = OtaRegion.entries[it]
                 }
             }
+            
+            // Search History View - placed before query button
+            com.houvven.oplusupdater.ui.screen.home.components.SearchHistoryView(
+                historyList = historyList,
+                onHistorySelect = { item ->
+                    otaVersion = item.otaVersion
+                    model = item.model
+                    carrier = item.carrier
+                    try {
+                        otaRegion = OtaRegion.valueOf(item.region)
+                    } catch (e: Exception) {
+                        // ignore invalid region
+                    }
+                },
+                onClearHistory = {
+                    com.houvven.oplusupdater.utils.HistoryUtils.clearHistory(context)
+                    historyList = emptyList()
+                }
+            )
 
             Button(
                 onClick = {
@@ -230,6 +257,13 @@ fun HomeScreen() {
                         it.model = model
                         it.nvCarrier = carrier
                     }
+                    // Save to history
+                    com.houvven.oplusupdater.utils.HistoryUtils.saveHistory(
+                        context,
+                        com.houvven.oplusupdater.utils.HistoryUtils.HistoryItem(otaVersion, otaRegion.name, model, carrier)
+                    )
+                    historyList = com.houvven.oplusupdater.utils.HistoryUtils.getHistory(context)
+                    
                     coroutineScope.launch(Dispatchers.IO) {
                         isQuerying = true
                         try {

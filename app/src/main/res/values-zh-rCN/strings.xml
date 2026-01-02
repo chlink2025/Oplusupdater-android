@@ -29,4 +29,27 @@
     <string name="turkey">土耳其</string>
     <string name="thailand">泰国</string>
     <string name="global">全球</string>
+    <string name="search_history">查询历史</string>
+    <string name="clear_history">清空历史</string>
+    <string name="select_placeholder">请选择</string>
+    <string name="original_url">原始链接</string>
+    <string name="url_resolve_failed">链接解析失败</string>
+    <string name="message">信息</string>
+    <string name="unknown_version">未知版本</string>
+    <string name="parse_payload">解析 Payload 获取分区列表</string>
+    <string name="parsing_payload">正在解析 Payload...</string>
+    <string name="partition_list">分区列表</string>
+    <string name="copy_all_partitions">已复制所有分区信息</string>
+    <string name="download_tip">💡 点击下载按钮将分区保存到 Download 目录</string>
+    <string name="download_wait">正在下载其他分区，请稍候</string>
+    <string name="parse_first">请先解析 Payload</string>
+    <string name="save_success">✓ 已保存并校验: </string>
+    <string name="save_verify_failed">⚠ 已保存但校验失败: </string>
+    <string name="expected">期望: </string>
+    <string name="actual">实际: </string>
+    <string name="download_failed">下载失败: </string>
+    <string name="copied_partition">已复制: </string>
+    <string name="collapse_list">收起分区列表</string>
+    <string name="expand_list">展开分区列表</string>
+    <string name="parse_failed">解析失败: </string>
 </resources>

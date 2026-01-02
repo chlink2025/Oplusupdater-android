@@ -4,6 +4,7 @@ import android.content.ClipData
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,8 +19,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.houvven.oplusupdater.R
 import com.houvven.oplusupdater.domain.UpdateQueryResponse
+import com.houvven.oplusupdater.utils.DownloadUrlResolver
 import com.houvven.oplusupdater.utils.StorageUnitUtil
 import com.houvven.oplusupdater.utils.toast
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import top.yukonga.miuix.kmp.basic.BasicComponentColors
@@ -43,11 +46,11 @@ fun UpdateQueryResponseCard(
     if (response.responseCode.toInt() != 200) {
         Card {
             SuperArrowWrapper(
-                title = "status",
+                title = stringResource(R.string.status),
                 summary = response.responseCode.toString()
             )
             SuperArrowWrapper(
-                title = "message",
+                title = stringResource(R.string.message),
                 summary = response.errMsg
             )
         }
@@ -109,6 +112,46 @@ private fun UpdateQueryResponseCardContent(
     val coroutineScope = rememberCoroutineScope()
 
     var showUpdateLogDialog by remember { mutableStateOf(false) }
+    
+    // Metadata parsing state
+    var buildTime by remember { mutableStateOf<String?>(null) }
+    var metadataSecurityPatch by remember { mutableStateOf<String?>(null) }
+    
+    // URL resolution state
+    var resolvedUrlInfo by remember { mutableStateOf<DownloadUrlResolver.ResolvedUrl?>(null) }
+
+    // Fetch metadata from remote ZIP
+    LaunchedEffect(response) {
+        val url = response.components?.firstOrNull()?.componentPackets?.url
+        if (!url.isNullOrEmpty()) {
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    // Resolve URL first if needed
+                    val resolved = DownloadUrlResolver.resolveUrl(url)
+                    resolvedUrlInfo = resolved
+                    
+                    // Use resolved URL for metadata fetching
+                    val urlToUse = resolved.getDownloadUrl()
+                    val metadata = com.houvven.oplusupdater.utils.MetadataUtils.getMetadata(urlToUse)
+                    if (metadata.isNotEmpty()) {
+                        val timestamp = com.houvven.oplusupdater.utils.MetadataUtils.getMetadataValue(metadata, "post-timestamp=")
+                        if (timestamp.isNotEmpty()) {
+                            runCatching {
+                                val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
+                                buildTime = sdf.format(Date(timestamp.toLong() * 1000))
+                            }
+                        }
+                        val patchLevel = com.houvven.oplusupdater.utils.MetadataUtils.getMetadataValue(metadata, "post-security-patch-level=")
+                        if (patchLevel.isNotEmpty()) {
+                            metadataSecurityPatch = patchLevel
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
 
     Column(
         modifier = modifier,
@@ -139,11 +182,11 @@ private fun UpdateQueryResponseCardContent(
             )
             SuperArrowWrapper(
                 title = stringResource(R.string.security_patch),
-                summary = securityPatch ?: securityPatchVendor
+                summary = metadataSecurityPatch ?: securityPatch ?: securityPatchVendor
             )
             SuperArrowWrapper(
                 title = stringResource(R.string.published_time),
-                summary = publishedTime?.let {
+                summary = buildTime ?: publishedTime?.let {
                     SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
                         .format(Date(it))
                 }
@@ -168,16 +211,46 @@ private fun UpdateQueryResponseCardContent(
                     rightText = size
                 )
                 componentPackets.manualUrl?.let {
+                    // Get the final download URL (resolved if needed, otherwise original)
+                    val finalDownloadUrl = resolvedUrlInfo?.getDownloadUrl() ?: componentPackets.url
+                    val originalUrl = componentPackets.url
+                    val wasResolved = resolvedUrlInfo?.needsResolution == true && resolvedUrlInfo?.resolvedUrl != null
+                    
+                    // Show original URL first if resolution was needed
+                    if (wasResolved) {
+                        SuperArrowWrapper(
+                            title = stringResource(R.string.original_url),
+                            summary = originalUrl,
+                            onClick = {
+                                val urlToCopy = originalUrl ?: return@SuperArrowWrapper
+                                coroutineScope.launch {
+                                    clipboard.setClipEntry(ClipData.newPlainText("original_url", urlToCopy).toClipEntry())
+                                }
+                                context.toast(R.string.copied)
+                            }
+                        )
+                    }
+                    
+                    // Always show the final download URL (resolved or original)
                     SuperArrowWrapper(
                         title = stringResource(R.string.packet_url),
-                        summary = componentPackets.url,
+                        summary = finalDownloadUrl,
                         onClick = {
+                            val urlToCopy = finalDownloadUrl ?: return@SuperArrowWrapper
                             coroutineScope.launch {
-                                clipboard.setClipEntry(ClipData.newPlainText(it, it).toClipEntry())
+                                clipboard.setClipEntry(ClipData.newPlainText("url", urlToCopy).toClipEntry())
                             }
                             context.toast(R.string.copied)
                         }
                     )
+                    
+                    // Show error if resolution failed
+                    if (resolvedUrlInfo?.needsResolution == true && resolvedUrlInfo?.error != null) {
+                        SuperArrowWrapper(
+                            title = stringResource(R.string.url_resolve_failed),
+                            summary = resolvedUrlInfo?.error
+                        )
+                    }
                 }
                 componentPackets.md5?.let {
                     SuperArrowWrapper(
@@ -193,13 +266,29 @@ private fun UpdateQueryResponseCardContent(
                 }
             }
         }
+        
+        // Partition List View - Parse payload.bin to show partitions
+        // Only show after URL resolution is complete (if needed)
+        val originalUrl = components?.firstOrNull()?.componentPackets?.url
+        val needsResolve = originalUrl?.contains("/downloadCheck") == true
+        val actualDownloadUrl = when {
+            resolvedUrlInfo != null -> resolvedUrlInfo?.getDownloadUrl()
+            !needsResolve && originalUrl != null -> originalUrl
+            else -> null // Still resolving, wait
+        }
+        if (actualDownloadUrl != null) {
+            PartitionListView(
+                downloadUrl = actualDownloadUrl,
+                systemVersion = realOtaVersion ?: otaVersion ?: "Unknown"
+            )
+        }
     }
 
     description?.panelUrl?.let {
         UpdateLogDialog(
             show = showUpdateLogDialog,
             url = it,
-            softwareVersion = versionName ?: "Only god known it.",
+            softwareVersion = versionName ?: stringResource(R.string.unknown_version),
             onDismissRequest = { showUpdateLogDialog = false }
         )
     }

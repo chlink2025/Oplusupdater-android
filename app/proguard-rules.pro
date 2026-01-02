@@ -19,3 +19,20 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Protobuf rules
+-keep class chromeos_update_engine.** { *; }
+-keep class com.google.protobuf.** { *; }
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {
+    <fields>;
+}
+
+# OkHttp rules
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
+
+# Apache Commons Compress rules
+-dontwarn org.apache.commons.compress.**
+-keep class org.apache.commons.compress.** { *; }
+-keep class org.tukaani.xz.** { *; }
