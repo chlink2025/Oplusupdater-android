@@ -27,6 +27,9 @@ object HttpRangeUtil {
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
+    // User-Agent header to avoid 403 Forbidden from CDN servers
+    private const val USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 14; IN2020 Build/UP1A.231005.007)"
+
     @Throws(IOException::class)
     suspend fun init(link: String) = withContext(Dispatchers.IO) {
         url = link
@@ -34,6 +37,7 @@ object HttpRangeUtil {
             val request = Request.Builder()
                 .url(link)
                 .addHeader("Range", "bytes=0-0")
+                .addHeader("User-Agent", USER_AGENT)
                 .build()
 
             client.newCall(request).execute().use { response ->
@@ -64,7 +68,10 @@ object HttpRangeUtil {
         var totalBytesRead = 0
 
         val rangeHeader = "bytes=$position-${position + byteArray.size - 1}"
-        val request = requestBuilder.addHeader("Range", rangeHeader).build()
+        val request = requestBuilder
+            .addHeader("Range", rangeHeader)
+            .addHeader("User-Agent", USER_AGENT)
+            .build()
 
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("Unexpected code $response")
