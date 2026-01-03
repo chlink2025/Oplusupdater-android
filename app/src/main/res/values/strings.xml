@@ -31,4 +31,27 @@
     <string name="turkey">Turkey</string>
     <string name="thailand">Thailand</string>
     <string name="global">Global</string>
+    <string name="search_history">Search History</string>
+    <string name="clear_history">Clear History</string>
+    <string name="select_placeholder">Please Select</string>
+    <string name="original_url">Original URL</string>
+    <string name="url_resolve_failed">URL Resolution Failed</string>
+    <string name="message">Message</string>
+    <string name="unknown_version">Unknown Version</string>
+    <string name="parse_payload">Parse Payload</string>
+    <string name="parsing_payload">Parsing Payload...</string>
+    <string name="partition_list">Partition List</string>
+    <string name="copy_all_partitions">All partition info copied</string>
+    <string name="download_tip">💡 Click download button to save partition to Download directory</string>
+    <string name="download_wait">Downloading other partition, please wait</string>
+    <string name="parse_first">Please parse Payload first</string>
+    <string name="save_success">✓ Saved and verified: </string>
+    <string name="save_verify_failed">⚠ Saved but verification failed: </string>
+    <string name="expected">Expected: </string>
+    <string name="actual">Actual: </string>
+    <string name="download_failed">Download failed: </string>
+    <string name="copied_partition">Copied: </string>
+    <string name="collapse_list">Collapse List</string>
+    <string name="expand_list">Expand List</string>
+    <string name="parse_failed">Parse failed: </string>
 </resources>
