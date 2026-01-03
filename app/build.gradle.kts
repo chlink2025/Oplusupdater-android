@@ -1,9 +1,11 @@
 import com.android.build.gradle.internal.api.BaseVariantOutputImpl
+import com.google.protobuf.gradle.id
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.protobuf)
     kotlin("plugin.serialization") version libs.versions.kotlin
 }
 
@@ -56,6 +58,24 @@ android {
     }
 }
 
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:4.29.1"
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                id("java") {
+                    option("lite")
+                }
+                id("kotlin") {
+                    option("lite")
+                }
+            }
+        }
+    }
+}
+
 dependencies {
     implementation(rootProject.files("OplusUpdater/updater.aar"))
     implementation(libs.kotlinx.serialization.json)
@@ -69,6 +89,11 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.miuix)
+    // Payload parsing dependencies
+    implementation(libs.protobuf.kotlin.lite)
+    implementation(libs.commons.compress)
+    implementation(libs.xz)
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
