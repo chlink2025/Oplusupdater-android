@@ -47,7 +47,7 @@ jobs:
           mv pkg/updater/updater.go ./updater.go
           mv ./updater-taste.go pkg/updater/updater.go
           go build -o ~/updater-taste ./cmd/updater
-          rm pkg/updater/updater.go
+          mv pkg/updater/updater.go ./updater-taste.go
           mv ./updater.go pkg/updater/updater.go
           go get golang.org/x/mobile/bind
           gomobile init
@@ -95,6 +95,23 @@ jobs:
         with:
           name: updater-taste
           path: ~/updater-taste
+          overwrite: true
+          if-no-files-found: error
+      - name: reBuild taste apk
+        working-directory: OplusUpdater
+        run: |
+          pwd
+          mv ./updater-taste.go pkg/updater/updater.go
+          go get golang.org/x/mobile/bind
+          gomobile init
+          CGO_CFLAGS="-O2 -g0" CGO_LDFLAGS="-s" gomobile bind -tags "no_debug" -target=android -androidapi 26 -v ./pkg/updater
+          cd ..
+          ./gradlew assemble
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apps-taste
+          path: app/build/outputs/apk/**/*.apk
           overwrite: true
           if-no-files-found: error
 
