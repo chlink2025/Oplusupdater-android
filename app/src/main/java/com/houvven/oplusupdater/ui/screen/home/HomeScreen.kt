@@ -73,6 +73,15 @@ enum class OtaRegion(
     GL(R.string.global)
 }
 
+@Keep
+enum class UpdateMode(
+    @StringRes val strRes: Int,
+    val value: String
+) {
+    STABLE(R.string.update_mode_stable, "manual"),
+    TASTE(R.string.update_mode_taste, "taste")
+}
+
 @delegate:SuppressLint("PrivateApi")
 val systemOtaVersion: String by lazy {
     val clazz = Class.forName("android.os.SystemProperties")
@@ -87,7 +96,7 @@ fun HomeScreen() {
     val coroutineScope = rememberCoroutineScope { Dispatchers.IO }
     val scrollState = rememberScrollState()
     var showAboutInfoDialog by remember { mutableStateOf(false) }
-
+    var updateMode by rememberSaveable { mutableStateOf(UpdateMode.STABLE) }
     var isQuerying by rememberSaveable { mutableStateOf(false) }
     var expandMoreParameters by rememberSaveable { mutableStateOf(true) }
     var otaVersion by rememberSaveable { mutableStateOf(systemOtaVersion) }
@@ -226,6 +235,20 @@ fun HomeScreen() {
                     selectedIndex = OtaRegion.entries.indexOf(otaRegion)
                 ) {
                     otaRegion = OtaRegion.entries[it]
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MiuixTheme.colorScheme.surface)
+            ) {
+                SuperDropdown(
+                    title = stringResource(R.string.update_mode),
+                    items = UpdateMode.entries.map { stringResource(it.strRes) },
+                    selectedIndex = UpdateMode.entries.indexOf(updateMode)
+                ) {
+                    updateMode = UpdateMode.entries[it]
                 }
             }
             
