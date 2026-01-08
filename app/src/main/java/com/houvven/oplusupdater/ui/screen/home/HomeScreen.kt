@@ -279,6 +279,7 @@ fun HomeScreen() {
                         it.region = otaRegion.name
                         it.model = model
                         it.nvCarrier = carrier
+                        it.mode = updateMode.value
                     }
                     // Save to history
                     com.houvven.oplusupdater.utils.HistoryUtils.saveHistory(
