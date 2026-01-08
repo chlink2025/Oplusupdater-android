@@ -51,7 +51,7 @@ fun AboutInfoDialog(
             ) {
                 SuperArrow(
                     title = "Author",
-                    summary = "Houvven",
+                    summary = "origin:Houvven now:chlink2025",
                 )
                 SuperArrow(
                     title = "Version",
@@ -59,7 +59,7 @@ fun AboutInfoDialog(
                 )
                 SuperArrow(
                     title = "GitHub",
-                    summary = "https://github.com/houvven/OplusUpdater-android",
+                    summary = "https://github.com/chlink2025/Oplusupdater-android",
                     onClick = {
                         context.startUrl("https://github.com/houvven/OplusUpdater-android")
                     }

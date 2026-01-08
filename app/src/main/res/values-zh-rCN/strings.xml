@@ -52,4 +52,7 @@
     <string name="collapse_list">收起分区列表</string>
     <string name="expand_list">展开分区列表</string>
     <string name="parse_failed">解析失败: </string>
+    <string name="update_mode">更新模式</string>
+    <string name="update_mode_stable">正式版</string>
+    <string name="update_mode_taste">尝鲜更新</string>
 </resources>
