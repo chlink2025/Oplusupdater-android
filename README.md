@@ -5,7 +5,7 @@
 
 ## How to build?
 ```shell
-git clone https://github.com/Houvven/OplusUpdater-Android.git
+git clone https://github.com/chlink2025/Oplusupdater-android OplusUpdater-Android
 cd OplusUpdater-Android/OplusUpdater
 go get golang.org/x/mobile/bind
 gomobile init

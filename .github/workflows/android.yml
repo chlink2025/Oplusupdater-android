@@ -60,16 +60,16 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew assemble
 
-#      - uses: r0adkll/sign-android-release@v1
-#        id: sign_app
-#        with:
-#          releaseDirectory: app/build/outputs/apk/release
-#          signingKeyBase64: ${{ secrets.SIGNING_KEY_BASE64 }}
-#          alias: ${{ secrets.SIGNING_ALIAS }}
-#          keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
-#          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-#        env:
-#          BUILD_TOOLS_VERSION: "35.0.0"
+      - uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY_BASE64 }}
+          alias: ${{ secrets.SIGNING_ALIAS }}
+          keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "35.0.0"
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
