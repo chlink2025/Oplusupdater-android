@@ -54,4 +54,7 @@
     <string name="collapse_list">Collapse List</string>
     <string name="expand_list">Expand List</string>
     <string name="parse_failed">Parse failed: </string>
+    <string name="update_mode">Update Mode</string>
+    <string name="update_mode_stable">Stable</string>
+    <string name="update_mode_taste">Taste</string>    
 </resources>
