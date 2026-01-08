@@ -21,7 +21,7 @@ Flags:
       --carrier my_manifest/build.prop   Found in my_manifest/build.prop file, under the `NV_ID` reference, e.g., --carrier=01000100
   -h, --help                             help for oplus-updater
       --imei string                      IMEI, e.g., --imei=86429XXXXXXXX98
-      --mode int                         Mode: 0 (stable, default) or 1 (testing), e.g., --mode=0
+      --mode string                      Mode: manual (stable, default) or taste (testing), e.g., --mode=manual
       --model string                     Device model, e.g., --model=RMX3820
   -o, --ota-version string               OTA version (required), e.g., --ota-version=RMX3820_11.A.00_0000_000000000000
   -p, --proxy string                     Proxy server, e.g., --proxy=type://@host:port or --proxy=type://user:password@host:port, support http and socks proxy
