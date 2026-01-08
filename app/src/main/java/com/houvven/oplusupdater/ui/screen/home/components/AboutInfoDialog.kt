@@ -61,7 +61,7 @@ fun AboutInfoDialog(
                     title = "GitHub",
                     summary = "https://github.com/chlink2025/Oplusupdater-android",
                     onClick = {
-                        context.startUrl("https://github.com/clink2025/Oplusupdater-android")
+                        context.startUrl("https://github.com/chlink2025/Oplusupdater-android")
                     }
                 )
             }
