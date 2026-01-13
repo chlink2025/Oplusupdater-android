@@ -27,7 +27,7 @@ func TestQueryUpdate_CPH2653_EU_TEST(t *testing.T) {
 		OtaVersion: "CPH2653_11.A",
 		Region:     updater.RegionEu,
 		Model:      "CPH2653EEA",
-		Mode:       1,
+		Mode:       "taste",
 	}))
 }
 
