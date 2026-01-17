@@ -28,7 +28,11 @@ func (args *QueryUpdateArgs) post() {
 		args.Region = RegionCn
 	}
 	if m := strings.TrimSpace(args.Model); len(m) == 0 {
-		args.Model = strings.Split(args.OtaVersion, "_")[0]
+		suffixMap := map[string]string{
+			RegionEu: "EEA",
+			RegionIn: "IN",
+		}
+		args.Model = strings.Split(args.OtaVersion, "_")[0] + suffixMap[args.Region]
 	}
 }
 
