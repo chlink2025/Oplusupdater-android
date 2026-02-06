@@ -4,6 +4,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
@@ -75,6 +78,55 @@ object DownloadUrlResolver {
          */
         fun getDownloadUrl(): String {
             return resolvedUrl ?: originalUrl
+        }
+        
+        /**
+         * Extract Expires parameter from the resolved URL
+         */
+        fun getExpiresTime(): Date? {
+            val url = resolvedUrl ?: return null
+            return parseExpiresParam(url)
+        }
+        
+        /**
+         * Format the expires time as a readable string
+         */
+        fun getFormattedExpiresTime(): String? {
+            val expiresTime = getExpiresTime() ?: return null
+            val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
+            return sdf.format(expiresTime)
+        }
+    }
+    
+    /**
+     * Parse Expires parameter from URL (case-insensitive)
+     */
+    private fun parseExpiresParam(url: String): Date? {
+        return try {
+            // Parse URL parameters
+            val uri = java.net.URI(url)
+            val query = uri.query ?: return null
+            
+            // Split parameters and find Expires (case-insensitive)
+            val params = query.split("&")
+            for (param in params) {
+                val keyValue = param.split("=", limit = 2)
+                if (keyValue.size == 2) {
+                    val key = keyValue[0].lowercase()
+                    if (key == "expires") {
+                        val value = keyValue[1]
+                        // Try to parse as timestamp (seconds since epoch)
+                        val timestamp = value.toLongOrNull()
+                        if (timestamp != null) {
+                            return Date(timestamp * 1000) // Convert to milliseconds
+                        }
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }
