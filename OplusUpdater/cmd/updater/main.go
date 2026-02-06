@@ -54,7 +54,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().String("region", "CN", "Server zone: CN (default), EU or IN (optional), e.g., --region=CN")
+	rootCmd.Flags().String("region", "CN", "Server zone: CN (default), EU, IN, SG, RU, TR, TH, GL (Global), ID, TW, MY, VN, e.g., --region=CN")
 	rootCmd.Flags().String("model", "", "Device model, e.g., --model=RMX3820")
 	rootCmd.Flags().String("carrier", "", "Found in `my_manifest/build.prop` file, under the `NV_ID` reference, e.g., --carrier=01000100")
 	rootCmd.Flags().String("mode", "manual", "Mode: manual (stable, default) or taste (public testing), e.g., --mode=manual")
