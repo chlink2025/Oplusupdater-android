@@ -22,3 +22,5 @@ go install golang.org/x/mobile/cmd/gomobile@latest
 - [original project(now already delete (repository)](https://github.com/houvven/OplusUpdater-android)
 - [miuix](https://github.com/miuix-kotlin-multiplatform/miuix)
 - [go-mobile](https://github.com/golang/mobile)
+- [Payload-Dumper-Compose](https://github.com/rcmiku/Payload-Dumper-Compose)
+- [OPlus-Tracker](https://github.com/JerryTse-OSS/OPlus-Tracker)
