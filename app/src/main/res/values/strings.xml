@@ -56,5 +56,6 @@
     <string name="parse_failed">Parse failed: </string>
     <string name="update_mode">Update Mode</string>
     <string name="update_mode_stable">Stable</string>
-    <string name="update_mode_taste">Taste</string>    
+    <string name="update_mode_taste">Taste</string>
+    <string name="release_time">Release Time</string>
 </resources>

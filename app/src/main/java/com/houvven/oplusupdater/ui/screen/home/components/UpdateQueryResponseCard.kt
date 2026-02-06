@@ -216,6 +216,14 @@ private fun UpdateQueryResponseCardContent(
                     val originalUrl = componentPackets.url
                     val wasResolved = resolvedUrlInfo?.needsResolution == true && resolvedUrlInfo?.resolvedUrl != null
                     
+                    // Show release time if available (only for resolved URLs)
+                    resolvedUrlInfo?.getFormattedExpiresTime()?.let { expiresTime ->
+                        SuperArrowWrapper(
+                            title = stringResource(R.string.release_time),
+                            summary = expiresTime
+                        )
+                    }
+                    
                     // Show original URL first if resolution was needed
                     if (wasResolved) {
                         SuperArrowWrapper(
