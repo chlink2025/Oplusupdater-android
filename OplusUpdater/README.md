@@ -25,7 +25,7 @@ Flags:
       --model string                     Device model, e.g., --model=RMX3820
   -o, --ota-version string               OTA version (required), e.g., --ota-version=RMX3820_11.A.00_0000_000000000000
   -p, --proxy string                     Proxy server, e.g., --proxy=type://@host:port or --proxy=type://user:password@host:port, support http and socks proxy
-      --region string                    Server zone: CN (default), EU or IN (optional), e.g., --region=CN (default "CN")
+      --region string                    Server zone: CN (default), EU, IN, SG, RU, TR, TH, GL (Global), ID, TW, MY, VN, e.g., --region=CN (default "CN")
 ```
 
 ## Update request headers
