@@ -1,0 +1,143 @@
+name: Multi-Platform Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**/*.md'
+  pull_request:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**/*.md'
+
+jobs:
+  # 任务 1: 编译多平台二进制文件 (Windows/Linux/macOS x amd64/arm64)
+  build-binaries:
+    strategy:
+      matrix:
+        include:
+          # --- Linux ---
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            suffix: ""
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64    # 新增: Linux ARM64
+            suffix: ""
+            
+          # --- Windows ---
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            suffix: ".exe"
+          - os: windows-latest
+            goos: windows
+            goarch: arm64    # 新增: Windows ARM64 (适用于 Surface Pro X 等设备)
+            suffix: ".exe"
+            
+          # --- macOS ---
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64    # Apple Silicon (M1/M2/M3)
+            suffix: ""
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64    # Intel Mac (可选，如果您需要也可以加上)
+            suffix: ""
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build Binary
+        working-directory: OplusUpdater
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go mod tidy
+          # 自动根据矩阵变量生成文件名，例如: updater-linux-arm64, updater-windows-arm64.exe
+          go build -o updater-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} ./cmd/updater
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: OplusUpdater/updater-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+          if-no-files-found: error
+
+  # 任务 2: 编译 Android APK (保持原样)
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Set up golang/mobile
+        run: go install golang.org/x/mobile/cmd/gomobile@latest
+
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26d
+          local-cache: true
+
+      - name: Build go bindings
+        working-directory: OplusUpdater
+        run: |
+          rm -f go.sum
+          go mod tidy
+          go get golang.org/x/mobile/bind
+          gomobile init
+          CGO_CFLAGS="-O2 -g0" CGO_LDFLAGS="-s" gomobile bind -tags "no_debug" -target=android -androidapi 26 -v ./pkg/updater
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew assemble
+
+      - uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY_BASE64 }}
+          alias: ${{ secrets.SIGNING_ALIAS }}
+          keyStorePassword: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "35.0.0"
+
+      - name: Upload Android Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apps
+          path: app/build/outputs/apk/**/*-signed.apk
+          overwrite: true
+          if-no-files-found: error
+          
