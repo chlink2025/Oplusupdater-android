@@ -217,12 +217,7 @@ private fun UpdateQueryResponseCardContent(
                     val wasResolved = resolvedUrlInfo?.needsResolution == true && resolvedUrlInfo?.resolvedUrl != null
                     
                     // Show release time if available (only for resolved URLs)
-                    resolvedUrlInfo?.getFormattedExpiresTime()?.let { expiresTime ->
-                        SuperArrowWrapper(
-                            title = stringResource(R.string.release_time),
-                            summary = expiresTime
-                        )
-                    }
+
                     
                     // Show original URL first if resolution was needed
                     if (wasResolved) {
@@ -251,7 +246,12 @@ private fun UpdateQueryResponseCardContent(
                             context.toast(R.string.copied)
                         }
                     )
-                    
+                    resolvedUrlInfo?.getFormattedExpiresTime()?.let { expiresTime ->
+                        SuperArrowWrapper(
+                            title = stringResource(R.string.release_time),
+                            summary = expiresTime
+                        )
+                    }
                     // Show error if resolution failed
                     if (resolvedUrlInfo?.needsResolution == true && resolvedUrlInfo?.error != null) {
                         SuperArrowWrapper(

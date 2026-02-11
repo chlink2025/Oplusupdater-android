@@ -113,7 +113,7 @@ object DownloadUrlResolver {
                 val keyValue = param.split("=", limit = 2)
                 if (keyValue.size == 2) {
                     val key = keyValue[0].lowercase()
-                    if (key == "expires") {
+                    if (key == "expires" || key == "x-oss-expires") {
                         val value = keyValue[1]
                         // Try to parse as timestamp (seconds since epoch)
                         val timestamp = value.toLongOrNull()

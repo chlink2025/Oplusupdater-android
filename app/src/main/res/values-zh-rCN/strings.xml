@@ -55,4 +55,5 @@
     <string name="update_mode">更新模式</string>
     <string name="update_mode_stable">正式版</string>
     <string name="update_mode_taste">尝鲜更新</string>
+    <string name="release_time">过期时间</string>
 </resources>
