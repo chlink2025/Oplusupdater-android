@@ -14,6 +14,11 @@ var (
 
 type queryRunner func(*QueryUpdateArgs) (*ResponseResult, error)
 
+type requestComponent struct {
+	ComponentName    string `json:"componentName"`
+	ComponentVersion string `json:"componentVersion"`
+}
+
 type queryResponseBody struct {
 	OtaVersion     string `json:"otaVersion"`
 	RealOtaVersion string `json:"realOtaVersion"`
@@ -138,6 +143,33 @@ func appendModelSuffix(model, suffix string) string {
 		return normalizedModel
 	}
 	return normalizedModel + normalizedSuffix
+}
+
+func parseComponentsInput(componentsInput string) []requestComponent {
+	if strings.TrimSpace(componentsInput) == "" {
+		return nil
+	}
+
+	var components []requestComponent
+	for _, pair := range strings.Split(componentsInput, ",") {
+		if !strings.Contains(pair, ":") {
+			continue
+		}
+
+		name, version, _ := strings.Cut(pair, ":")
+		name = strings.TrimSpace(name)
+		version = strings.TrimSpace(version)
+		if name == "" || version == "" {
+			continue
+		}
+
+		components = append(components, requestComponent{
+			ComponentName:    name,
+			ComponentVersion: version,
+		})
+	}
+
+	return components
 }
 
 func queryWithIndiaFallback(args *QueryUpdateArgs, runner queryRunner, allowFallback bool) (*ResponseResult, error) {

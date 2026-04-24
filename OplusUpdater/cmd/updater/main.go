@@ -79,6 +79,10 @@ func queryArgsFromCommand(cmd *cobra.Command, otaVersion string) (*updater.Query
 	if err != nil {
 		return nil, err
 	}
+	componentsInput, err := getString("components")
+	if err != nil {
+		return nil, err
+	}
 	customLanguage, err := getString("language")
 	if err != nil {
 		return nil, err
@@ -114,25 +118,26 @@ func queryArgsFromCommand(cmd *cobra.Command, otaVersion string) (*updater.Query
 	}
 
 	return &updater.QueryUpdateArgs{
-		OtaVersion:     otaVersion,
-		Region:         region,
-		Model:          model,
-		NvCarrier:      carrier,
-		Mode:           mode,
-		IMEI:           imei,
-		Proxy:          proxy,
-		Guid:           guid,
-		Anti:           anti,
-		Gray:           gray,
-		GrayNew:        grayNew,
-		Pre:            pre,
-		CustomLanguage: customLanguage,
-		RomVersion:     romVersion,
-		AndroidVersion: androidVersion,
-		ColorOSVersion: colorOSVersion,
-		PipelineKey:    pipelineKey,
-		Operator:       operator,
-		CompanyID:      companyID,
+		OtaVersion:      otaVersion,
+		Region:          region,
+		Model:           model,
+		NvCarrier:       carrier,
+		Mode:            mode,
+		IMEI:            imei,
+		Proxy:           proxy,
+		Guid:            guid,
+		Anti:            anti,
+		Gray:            gray,
+		GrayNew:         grayNew,
+		Pre:             pre,
+		ComponentsInput: componentsInput,
+		CustomLanguage:  customLanguage,
+		RomVersion:      romVersion,
+		AndroidVersion:  androidVersion,
+		ColorOSVersion:  colorOSVersion,
+		PipelineKey:     pipelineKey,
+		Operator:        operator,
+		CompanyID:       companyID,
 	}, nil
 }
 
@@ -143,6 +148,7 @@ func newRootCmd() *cobra.Command {
 		Example: "  updater RMX5010_11.A --region CN\n" +
 			"  updater RMX5010_11.A --region CN --gray\n" +
 			"  updater PHP110 --region CN --graynew\n" +
+			"  updater PJX110_11.C.36_1360_20250814 --region CN --components System:PJX110_11.C.35_1350_202508010000\n" +
 			"  updater CPH2653_11.A --region EU --model CPH2653EEA\n" +
 			"  updater RMX3301 --region IN --anti\n" +
 			"  updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011\n" +
@@ -174,6 +180,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.Flags().Bool("anti", false, "Expand a device prefix through the anti taste strategy before selecting the best result")
 	rootCmd.Flags().Bool("gray", false, "Use the CN gray OTA host when region is CN")
 	rootCmd.Flags().Bool("graynew", false, "Run the tracker-style taste-to-gray prefix strategy before selecting the best result")
+	rootCmd.Flags().String("components", "", "Delta OTA components as name:fullversion,name:fullversion")
 	rootCmd.Flags().Bool("pre", false, "Use preview query path, typically with --guid")
 	rootCmd.Flags().String("language", "", "Override request language tag, e.g., --language=en-IN")
 	rootCmd.Flags().String("rom-version", "", "Override romVersion header, e.g., --rom-version=RMX3301_15.0.0.1410(EX01)")

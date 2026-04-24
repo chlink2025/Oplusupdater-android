@@ -44,6 +44,42 @@ func TestQueryResponseBodyEffectiveOTAVersion(t *testing.T) {
 	}
 }
 
+func TestParseComponentsInput(t *testing.T) {
+	components := parseComponentsInput(" System : PJX110_11.C.35_1350_202508010000 , invalid , Vendor: 13.1.0 , Empty: ")
+	if len(components) != 2 {
+		t.Fatalf("unexpected component count: got %d want 2", len(components))
+	}
+	if components[0].ComponentName != "System" || components[0].ComponentVersion != "PJX110_11.C.35_1350_202508010000" {
+		t.Fatalf("unexpected first component: %+v", components[0])
+	}
+	if components[1].ComponentName != "Vendor" || components[1].ComponentVersion != "13.1.0" {
+		t.Fatalf("unexpected second component: %+v", components[1])
+	}
+}
+
+func TestBuildRequestPayloadIncludesComponents(t *testing.T) {
+	args := &QueryUpdateArgs{
+		ComponentsInput: "System:PJX110_11.C.35_1350_202508010000,Vendor:13.1.0",
+	}
+
+	payload := buildRequestPayload(args, "device-guid")
+	rawComponents, ok := payload["components"]
+	if !ok {
+		t.Fatal("expected payload to include components")
+	}
+
+	components, ok := rawComponents.([]requestComponent)
+	if !ok {
+		t.Fatalf("unexpected components type: %T", rawComponents)
+	}
+	if len(components) != 2 {
+		t.Fatalf("unexpected component count: got %d want 2", len(components))
+	}
+	if payload["deviceId"] != "device-guid" {
+		t.Fatalf("unexpected device id: %v", payload["deviceId"])
+	}
+}
+
 func TestIsSimpleOTAVersion(t *testing.T) {
 	tests := []struct {
 		name       string

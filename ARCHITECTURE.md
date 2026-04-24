@@ -160,9 +160,9 @@ pkg/updater/*.go
   - 已修复 `QueryUpdate` 返回旧 JSON 解析错误的问题
 
 - 仍缺少高级查询能力
-  - 还没有 `components` 驱动的 Delta OTA 查询
   - `NvCarrier` 已可覆盖，但还没有更贴近 tracker 命名的 `nvid` 封装入口
-  - 已完成首版 `anti` 前缀策略、CN `gray` host 切换与 `graynew` taste-to-gray 双阶段流，`genshin` 仍未迁移
+  - 已完成首版 `components` 请求体注入、`anti` 前缀策略、CN `gray` host 切换与 `graynew` taste-to-gray 双阶段流
+  - `genshin` 仍未迁移，`components` 也还缺少稳定的在线 Delta 回归样本
 
 ### 6.2 Android UI
 
@@ -197,7 +197,7 @@ pkg/updater/*.go
 1. 重新生成 `updater.aar`，验证 Android 侧是否已受益于新查询协议
 2. 继续收敛 `OplusUpdater/README.md` 与实际协议暴露面
 3. 把 gomobile 产物生成流程整理成稳定脚本
-4. 评估未来新增的 `components / genshin` 等能力是否需要继续进入 CLI
+4. 评估未来新增的 `genshin` 等能力是否需要继续进入 CLI
 
 ### 第二阶段：拆 Android 的状态边界
 
@@ -268,7 +268,8 @@ pkg/updater/*.go
 5. 已完成：将 `QueryUpdate` 拆成单次查询与 `anti` 策略层，并补本地策略测试与在线回归样本。
 6. 已完成：补齐 tracker 风格的 CN `gray` host 选择，并增加 `--gray` 与在线回归样本。
 7. 已完成：补齐 tracker 风格的 `graynew` 双阶段前缀查询，并增加 `--graynew` 与在线回归样本。
-8. 待完成：继续把 `genshin / components` 等差异能力逐步迁入，同时控制 `QueryUpdateArgs` 的复杂度。
+8. 已完成：补齐 tracker 风格的 `components` 请求体注入，并增加 CLI 参数与本地解析测试。
+9. 待完成：继续把 `genshin` 等差异能力逐步迁入，同时为 `components` 补稳定的在线 Delta 回归样本。
 
 ### P3 Android 绑定与客户端
 

@@ -15,25 +15,26 @@ import (
 const zeroGUID = "0000000000000000000000000000000000000000000000000000000000000000"
 
 type QueryUpdateArgs struct {
-	OtaVersion     string
-	Region         string
-	Model          string
-	NvCarrier      string
-	Mode           string
-	IMEI           string
-	Proxy          string
-	Guid           string
-	Anti           bool
-	Gray           bool
-	GrayNew        bool
-	Pre            bool
-	CustomLanguage string
-	RomVersion     string
-	AndroidVersion string
-	ColorOSVersion string
-	PipelineKey    string
-	Operator       string
-	CompanyID      string
+	OtaVersion      string
+	Region          string
+	Model           string
+	NvCarrier       string
+	Mode            string
+	IMEI            string
+	Proxy           string
+	Guid            string
+	Anti            bool
+	Gray            bool
+	GrayNew         bool
+	Pre             bool
+	ComponentsInput string
+	CustomLanguage  string
+	RomVersion      string
+	AndroidVersion  string
+	ColorOSVersion  string
+	PipelineKey     string
+	Operator        string
+	CompanyID       string
 }
 
 func (args *QueryUpdateArgs) post() {
@@ -105,8 +106,8 @@ func buildRequestHeaders(args *QueryUpdateArgs, config *Config, headerDeviceID, 
 	}, nil
 }
 
-func buildRequestPayload(bodyDeviceID string) map[string]any {
-	return map[string]any{
+func buildRequestPayload(args *QueryUpdateArgs, bodyDeviceID string) map[string]any {
+	payload := map[string]any{
 		"mode":     "0",
 		"time":     time.Now().UnixMilli(),
 		"isRooted": "0",
@@ -117,6 +118,12 @@ func buildRequestPayload(bodyDeviceID string) map[string]any {
 			"check": true,
 		},
 	}
+
+	if components := parseComponentsInput(args.ComponentsInput); len(components) > 0 {
+		payload["components"] = components
+	}
+
+	return payload
 }
 
 func resolveUpdatePath(args *QueryUpdateArgs) string {
@@ -181,7 +188,7 @@ func queryUpdateOnce(args *QueryUpdateArgs) (*ResponseResult, error) {
 		return nil, err
 	}
 
-	requestPayload := buildRequestPayload(bodyDeviceID)
+	requestPayload := buildRequestPayload(currentArgs, bodyDeviceID)
 
 	requestBodyBytes, err := json.Marshal(requestPayload)
 	if err != nil {

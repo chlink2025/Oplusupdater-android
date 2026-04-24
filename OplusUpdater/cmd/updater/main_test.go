@@ -54,6 +54,7 @@ func TestQueryArgsFromCommandAdvancedFlags(t *testing.T) {
 		"--anti",
 		"--gray",
 		"--graynew",
+		"--components", "System:PJX110_11.C.35_1350_202508010000,Vendor:13.1.0",
 		"--pre",
 		"--language", "en-IN",
 		"--rom-version", "RMX3301_15.0.0.1410(EX01)",
@@ -85,6 +86,9 @@ func TestQueryArgsFromCommandAdvancedFlags(t *testing.T) {
 	}
 	if !args.Pre {
 		t.Fatal("expected pre flag to be true")
+	}
+	if args.ComponentsInput != "System:PJX110_11.C.35_1350_202508010000,Vendor:13.1.0" {
+		t.Fatalf("unexpected components input: %s", args.ComponentsInput)
 	}
 	if args.CustomLanguage != "en-IN" {
 		t.Fatalf("unexpected language: %s", args.CustomLanguage)

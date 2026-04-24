@@ -25,6 +25,7 @@ Flags:
       --carrier my_manifest/build.prop   Found in my_manifest/build.prop file, under the `NV_ID` reference, e.g., --carrier=01000100
       --coloros-version string           Override colorOSVersion header, e.g., --coloros-version=ColorOS15.0
       --company-id string                Override companyId header
+      --components string                Delta OTA components as name:fullversion,name:fullversion
       --gray                             Use the CN gray OTA host when region is CN
       --graynew                          Run the tracker-style taste-to-gray prefix strategy before selecting the best result
       --guid string                      Preview GUID, must be a 64-character hexadecimal string
@@ -47,6 +48,7 @@ Examples:
 updater RMX5010_11.A --region CN
 updater RMX5010_11.A --region CN --gray
 updater PHP110 --region CN --graynew
+updater PJX110_11.C.36_1360_20250814 --region CN --components System:PJX110_11.C.35_1350_202508010000
 updater CPH2653_11.A --region EU --model CPH2653EEA
 updater RMX3301 --region IN --anti
 updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011
@@ -59,7 +61,10 @@ When `--gray` is enabled with `--region CN`, the query uses the tracker-aligned 
 
 When `--graynew` is enabled with a device prefix such as `PHP110`, the CLI first probes the prefix in `taste` mode, then re-queries the returned OTA on the CN gray host and returns the best successful final package.
 
-The current CLI now covers the existing public Go query fields except for future protocol extensions that are not yet in `QueryUpdateArgs`, such as `components` and `genshin`.
+When `--components` is provided, the CLI injects a tracker-style `components` array into the encrypted request body for delta OTA queries. The value format is `name:fullversion,name:fullversion`.
+For delta OTA queries, use a full OTA version together with the real component versions from the device. Otherwise the server may still return the normal full package.
+
+The current CLI now covers the existing public Go query fields except for future protocol extensions that are not yet in `QueryUpdateArgs`, such as `genshin`.
 
 ## Current request headers
 
