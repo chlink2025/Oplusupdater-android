@@ -175,7 +175,6 @@ pkg/updater/*.go
 ### 6.2 Android UI
 
 - `HomeScreen.kt`
-  - `MutableSharedFlow` 未 `remember`，重组后可能丢失消息通道。
   - 页面同时承担输入、请求、消息、历史、结果渲染触发，状态职责偏重。
 
 - `UpdateLogDialog.kt`
@@ -282,7 +281,7 @@ pkg/updater/*.go
 
 1. 已完成：确认 Go 修复后，Android 已通过新的 `updater.aar` 获取更新后的查询逻辑，并完成 `getConfig(region, gray)` 签名适配。
 2. 已完成：修正 `UpdateQueryResponseCard.kt` 中“复用第一个组件 URL 到全部组件”的问题，并让分区解析入口按组件使用各自的最终下载地址。
-3. 修正 `HomeScreen.kt` 中 `MutableSharedFlow` 未 `remember` 的状态风险。
+3. 已完成：修正 `HomeScreen.kt` 中 `MutableSharedFlow` 未 `remember` 的状态风险，避免重组后消息流实例漂移。
 4. 之后再考虑引入 `ViewModel`，不要在查询主链路未稳定前提前做大重构。
 
 ### P4 下载与分区导出

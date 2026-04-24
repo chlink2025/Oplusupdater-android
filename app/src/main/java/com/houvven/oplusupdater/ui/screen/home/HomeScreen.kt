@@ -44,7 +44,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -104,7 +103,7 @@ fun HomeScreen() {
     var carrier by rememberSaveable { mutableStateOf("") }
     var otaRegion by rememberSaveable { mutableStateOf(OtaRegion.CN) }
     var responseResult by remember { mutableStateOf<ResponseResult?>(null) }
-    val msgFlow = MutableSharedFlow<String>()
+    val msgFlow = remember { MutableSharedFlow<String>(extraBufferCapacity = 1) }
     
     // History state
     var historyList by remember { mutableStateOf(emptyList<com.houvven.oplusupdater.utils.HistoryUtils.HistoryItem>()) }
@@ -134,7 +133,7 @@ fun HomeScreen() {
 
     LaunchedEffect(msgFlow) {
         msgFlow.collectLatest {
-            withContext(Dispatchers.Main) { context.toast(it) }
+            context.toast(it)
         }
     }
 
