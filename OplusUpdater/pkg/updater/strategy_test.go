@@ -104,6 +104,7 @@ func TestProcessOTAPrefixMatchesTrackerRules(t *testing.T) {
 		name        string
 		otaPrefix   string
 		region      string
+		genshin     string
 		pre         bool
 		customModel string
 		wantOTA     string
@@ -139,10 +140,42 @@ func TestProcessOTAPrefixMatchesTrackerRules(t *testing.T) {
 			wantOTA:   "PJX110PRE_11.A.01_0001_197001010000",
 			wantModel: "PJX110",
 		},
+		{
+			name:      "genshin ys decorates ota and strips model suffix",
+			otaPrefix: "PJX110_11.A",
+			region:    RegionCn,
+			genshin:   "1",
+			wantOTA:   "PJX110YS_11.A.01_0001_197001010000",
+			wantModel: "PJX110",
+		},
+		{
+			name:      "genshin ovt decorates ota and strips model suffix",
+			otaPrefix: "PJX110_11.A",
+			region:    RegionCn,
+			genshin:   "2",
+			wantOTA:   "PJX110Ovt_11.A.01_0001_197001010000",
+			wantModel: "PJX110",
+		},
+		{
+			name:      "genshin wins over pre",
+			otaPrefix: "PJX110_11.A",
+			region:    RegionCn,
+			genshin:   "1",
+			pre:       true,
+			wantOTA:   "PJX110YS_11.A.01_0001_197001010000",
+			wantModel: "PJX110",
+		},
+		{
+			name:      "explicit ovt prefix normalizes model",
+			otaPrefix: "PJX110OVT_11.A",
+			region:    RegionCn,
+			wantOTA:   "PJX110Ovt_11.A.01_0001_197001010000",
+			wantModel: "PJX110",
+		},
 	}
 
 	for _, tc := range tests {
-		gotOTA, gotModel := processOTAPrefix(tc.otaPrefix, tc.region, tc.pre, tc.customModel)
+		gotOTA, gotModel := processOTAPrefix(tc.otaPrefix, tc.region, tc.genshin, tc.pre, tc.customModel)
 		if gotOTA != tc.wantOTA {
 			t.Fatalf("%s: unexpected ota version: got %s want %s", tc.name, gotOTA, tc.wantOTA)
 		}

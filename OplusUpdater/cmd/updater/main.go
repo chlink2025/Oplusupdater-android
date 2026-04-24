@@ -67,6 +67,10 @@ func queryArgsFromCommand(cmd *cobra.Command, otaVersion string) (*updater.Query
 	if err != nil {
 		return nil, err
 	}
+	genshin, err := getString("genshin")
+	if err != nil {
+		return nil, err
+	}
 	anti, err := getBool("anti")
 	if err != nil {
 		return nil, err
@@ -116,6 +120,10 @@ func queryArgsFromCommand(cmd *cobra.Command, otaVersion string) (*updater.Query
 	if guid != "" && !isHexGUID(guid) {
 		return nil, fmt.Errorf("guid must be a 64-character hexadecimal string")
 	}
+	genshin = strings.TrimSpace(genshin)
+	if genshin != "" && genshin != "0" && genshin != "1" && genshin != "2" {
+		return nil, fmt.Errorf("genshin must be one of 0, 1, or 2")
+	}
 
 	return &updater.QueryUpdateArgs{
 		OtaVersion:      otaVersion,
@@ -126,6 +134,7 @@ func queryArgsFromCommand(cmd *cobra.Command, otaVersion string) (*updater.Query
 		IMEI:            imei,
 		Proxy:           proxy,
 		Guid:            guid,
+		Genshin:         genshin,
 		Anti:            anti,
 		Gray:            gray,
 		GrayNew:         grayNew,
@@ -152,6 +161,7 @@ func newRootCmd() *cobra.Command {
 			"  updater CPH2653_11.A --region EU --model CPH2653EEA\n" +
 			"  updater RMX3301 --region IN --anti\n" +
 			"  updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011\n" +
+			"  updater PJX110_11.A --region CN --genshin 1\n" +
 			"  updater PJX110_11.A --region CN --pre --guid 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -180,6 +190,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.Flags().Bool("anti", false, "Expand a device prefix through the anti taste strategy before selecting the best result")
 	rootCmd.Flags().Bool("gray", false, "Use the CN gray OTA host when region is CN")
 	rootCmd.Flags().Bool("graynew", false, "Run the tracker-style taste-to-gray prefix strategy before selecting the best result")
+	rootCmd.Flags().String("genshin", "0", "Tracker-style OTA decoration: 0 (off), 1 (YS), or 2 (Ovt)")
 	rootCmd.Flags().String("components", "", "Delta OTA components as name:fullversion,name:fullversion")
 	rootCmd.Flags().Bool("pre", false, "Use preview query path, typically with --guid")
 	rootCmd.Flags().String("language", "", "Override request language tag, e.g., --language=en-IN")

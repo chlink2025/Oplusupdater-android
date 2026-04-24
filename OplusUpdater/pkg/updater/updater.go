@@ -27,6 +27,7 @@ type QueryUpdateArgs struct {
 	Gray            bool
 	GrayNew         bool
 	Pre             bool
+	Genshin         string
 	ComponentsInput string
 	CustomLanguage  string
 	RomVersion      string
@@ -38,13 +39,19 @@ type QueryUpdateArgs struct {
 }
 
 func (args *QueryUpdateArgs) post() {
-	args.OtaVersion = normalizeOTAVersion(args.OtaVersion)
 	args.Region = normalizeRegion(args.Region)
+	args.Genshin = normalizeGenshin(args.Genshin)
 
-	if model := strings.TrimSpace(args.Model); model == "" {
-		args.Model = defaultModelForSingleQuery(args.OtaVersion, args.Region)
+	if shouldUseTrackerOTAPrefixProcessing(args.OtaVersion, args.Genshin, args.Pre) {
+		args.OtaVersion, args.Model = processOTAPrefix(args.OtaVersion, args.Region, args.Genshin, args.Pre, args.Model)
 	} else {
-		args.Model = model
+		args.OtaVersion = normalizeOTAVersion(args.OtaVersion)
+
+		if model := strings.TrimSpace(args.Model); model == "" {
+			args.Model = defaultModelForSingleQuery(args.OtaVersion, args.Region)
+		} else {
+			args.Model = model
+		}
 	}
 
 	if mode := strings.TrimSpace(args.Mode); mode == "" {

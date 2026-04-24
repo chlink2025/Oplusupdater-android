@@ -54,6 +54,7 @@ func TestQueryArgsFromCommandAdvancedFlags(t *testing.T) {
 		"--anti",
 		"--gray",
 		"--graynew",
+		"--genshin", "2",
 		"--components", "System:PJX110_11.C.35_1350_202508010000,Vendor:13.1.0",
 		"--pre",
 		"--language", "en-IN",
@@ -83,6 +84,9 @@ func TestQueryArgsFromCommandAdvancedFlags(t *testing.T) {
 	}
 	if !args.GrayNew {
 		t.Fatal("expected graynew flag to be true")
+	}
+	if args.Genshin != "2" {
+		t.Fatalf("unexpected genshin: %s", args.Genshin)
 	}
 	if !args.Pre {
 		t.Fatal("expected pre flag to be true")
@@ -121,6 +125,17 @@ func TestQueryArgsFromCommandRejectsInvalidGUID(t *testing.T) {
 
 	if _, err := queryArgsFromCommand(cmd, "PJX110_11.A"); err == nil {
 		t.Fatal("expected invalid guid to return an error")
+	}
+}
+
+func TestQueryArgsFromCommandRejectsInvalidGenshin(t *testing.T) {
+	cmd := newRootCmd()
+	if err := cmd.Flags().Parse([]string{"--genshin", "3"}); err != nil {
+		t.Fatalf("Parse returned error: %v", err)
+	}
+
+	if _, err := queryArgsFromCommand(cmd, "PJX110_11.A"); err == nil {
+		t.Fatal("expected invalid genshin to return an error")
 	}
 }
 

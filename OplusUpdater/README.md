@@ -26,6 +26,7 @@ Flags:
       --coloros-version string           Override colorOSVersion header, e.g., --coloros-version=ColorOS15.0
       --company-id string                Override companyId header
       --components string                Delta OTA components as name:fullversion,name:fullversion
+      --genshin string                   Tracker-style OTA decoration: 0 (off), 1 (YS), or 2 (Ovt) (default "0")
       --gray                             Use the CN gray OTA host when region is CN
       --graynew                          Run the tracker-style taste-to-gray prefix strategy before selecting the best result
       --guid string                      Preview GUID, must be a 64-character hexadecimal string
@@ -52,6 +53,7 @@ updater PJX110_11.C.36_1360_20250814 --region CN --components System:PJX110_11.C
 updater CPH2653_11.A --region EU --model CPH2653EEA
 updater RMX3301 --region IN --anti
 updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011
+updater PJX110_11.A --region CN --genshin 1
 updater PJX110_11.A --region CN --pre --guid 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 ```
 
@@ -64,7 +66,10 @@ When `--graynew` is enabled with a device prefix such as `PHP110`, the CLI first
 When `--components` is provided, the CLI injects a tracker-style `components` array into the encrypted request body for delta OTA queries. The value format is `name:fullversion,name:fullversion`.
 For delta OTA queries, use a full OTA version together with the real component versions from the device. Otherwise the server may still return the normal full package.
 
-The current CLI now covers the existing public Go query fields except for future protocol extensions that are not yet in `QueryUpdateArgs`, such as `genshin`.
+When `--genshin` is set to `1` or `2`, the CLI applies the tracker-style OTA prefix decoration rules (`YS` / `Ovt`). `--genshin` takes precedence over `--pre`, and a decorated OTA prefix resets the request model back to the base model name.
+This decoration currently applies to OTA prefixes or full OTA versions such as `PJX110_11.A`; bare device prefixes still need a strategy layer such as `--anti` or `--graynew` to expand candidates first.
+
+The current CLI now covers the existing public Go query fields for the current migration stage, including `genshin`, `anti`, `gray`, `graynew`, `components`, and `NvCarrier` override support.
 
 ## Current request headers
 

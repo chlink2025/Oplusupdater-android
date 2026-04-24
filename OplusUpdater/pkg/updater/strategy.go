@@ -60,6 +60,15 @@ func normalizeOTAVersion(otaVersion string) string {
 	return normalized
 }
 
+func normalizeGenshin(genshin string) string {
+	switch strings.TrimSpace(genshin) {
+	case "1", "2":
+		return strings.TrimSpace(genshin)
+	default:
+		return "0"
+	}
+}
+
 func extractBaseModel(otaVersion string) string {
 	parts := strings.Split(strings.TrimSpace(otaVersion), "_")
 	if len(parts) == 0 {
@@ -90,10 +99,25 @@ func isSimpleOTAVersion(otaVersion string) bool {
 	return simpleOTAVersionPattern.MatchString(normalized) || strings.Count(normalized, "_") >= 3
 }
 
-func processOTAPrefix(otaPrefix, region string, pre bool, customModel string) (string, string) {
-	processedPrefix := strings.TrimSpace(otaPrefix)
+func shouldUseTrackerOTAPrefixProcessing(otaVersion, genshin string, pre bool) bool {
+	normalized := strings.ReplaceAll(strings.TrimSpace(otaVersion), "OVT", "Ovt")
+	if normalized == "" || !strings.Contains(normalized, "_") {
+		return false
+	}
+
+	return isSimpleOTAVersion(normalized) ||
+		strings.Contains(normalized, "YS") ||
+		strings.Contains(normalized, "Ovt") ||
+		strings.Contains(normalized, "PRE") ||
+		normalizeGenshin(genshin) != "0" ||
+		pre
+}
+
+func processOTAPrefix(otaPrefix, region, genshin string, pre bool, customModel string) (string, string) {
+	processedPrefix := strings.ReplaceAll(strings.TrimSpace(otaPrefix), "OVT", "Ovt")
 	baseModel := extractBaseModel(processedPrefix)
 	model := strings.TrimSpace(customModel)
+	genshin = normalizeGenshin(genshin)
 
 	if model == "" {
 		switch normalizeRegion(region) {
@@ -104,13 +128,22 @@ func processOTAPrefix(otaPrefix, region string, pre bool, customModel string) (s
 		}
 	}
 
-	if pre && !strings.Contains(processedPrefix, "PRE") {
+	if genshin == "1" && !strings.Contains(processedPrefix, "YS") {
+		model = baseModel
+		processedPrefix = strings.Replace(processedPrefix, model, model+"YS", 1)
+	} else if genshin == "2" && !strings.Contains(processedPrefix, "Ovt") {
+		model = baseModel
+		processedPrefix = strings.Replace(processedPrefix, model, model+"Ovt", 1)
+	} else if pre && !strings.Contains(processedPrefix, "PRE") {
 		model = baseModel
 		processedPrefix = strings.Replace(processedPrefix, baseModel, baseModel+"PRE", 1)
-		baseModel = extractBaseModel(processedPrefix)
 	}
 
-	if strings.Contains(processedPrefix, "PRE") {
+	if strings.Contains(processedPrefix, "YS") {
+		model = strings.Replace(baseModel, "YS", "", 1)
+	} else if strings.Contains(processedPrefix, "Ovt") {
+		model = strings.Replace(baseModel, "Ovt", "", 1)
+	} else if strings.Contains(processedPrefix, "PRE") {
 		model = strings.Replace(baseModel, "PRE", "", 1)
 	}
 
@@ -203,7 +236,7 @@ func queryUpdateAnti(args *QueryUpdateArgs, runner queryRunner) (*ResponseResult
 
 	for _, suffix := range antiOTASuffixes {
 		candidatePrefix := basePrefix + suffix
-		processedOTA, processedModel := processOTAPrefix(candidatePrefix, normalizedRegion, args.Pre, customModel)
+		processedOTA, processedModel := processOTAPrefix(candidatePrefix, normalizedRegion, args.Genshin, args.Pre, customModel)
 
 		currentArgs := cloneQueryUpdateArgs(args)
 		currentArgs.OtaVersion = processedOTA
@@ -220,7 +253,7 @@ func queryUpdateAnti(args *QueryUpdateArgs, runner queryRunner) (*ResponseResult
 		lastResult = result
 
 		if result != nil && result.ResponseCode == 2004 && lastSuccessFake != "" {
-			retryOTA, retryModel := processOTAPrefix(lastSuccessFake, normalizedRegion, args.Pre, customModel)
+			retryOTA, retryModel := processOTAPrefix(lastSuccessFake, normalizedRegion, args.Genshin, args.Pre, customModel)
 
 			retryArgs := cloneQueryUpdateArgs(args)
 			retryArgs.OtaVersion = retryOTA
@@ -287,7 +320,7 @@ func queryUpdateGrayNew(args *QueryUpdateArgs, runner queryRunner) (*ResponseRes
 
 	for _, suffix := range antiOTASuffixes {
 		candidatePrefix := basePrefix + suffix
-		tasteOTA, tasteModel := processOTAPrefix(candidatePrefix, normalizedRegion, args.Pre, customModel)
+		tasteOTA, tasteModel := processOTAPrefix(candidatePrefix, normalizedRegion, args.Genshin, args.Pre, customModel)
 
 		tasteArgs := cloneQueryUpdateArgs(args)
 		tasteArgs.OtaVersion = tasteOTA
@@ -318,7 +351,7 @@ func queryUpdateGrayNew(args *QueryUpdateArgs, runner queryRunner) (*ResponseRes
 			continue
 		}
 
-		finalOTA, finalModel := processOTAPrefix(nextOTAVersion, normalizedRegion, false, customModel)
+		finalOTA, finalModel := processOTAPrefix(nextOTAVersion, normalizedRegion, "0", false, customModel)
 
 		finalArgs := cloneQueryUpdateArgs(args)
 		finalArgs.OtaVersion = finalOTA
