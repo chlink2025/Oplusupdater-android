@@ -24,6 +24,7 @@ type QueryUpdateArgs struct {
 	Proxy          string
 	Guid           string
 	Anti           bool
+	Gray           bool
 	Pre            bool
 	CustomLanguage string
 	RomVersion     string
@@ -144,7 +145,7 @@ func queryUpdateOnce(args *QueryUpdateArgs) (*ResponseResult, error) {
 	currentArgs := cloneQueryUpdateArgs(args)
 	currentArgs.post()
 
-	config := GetConfig(currentArgs.Region)
+	config := GetConfig(currentArgs.Region, currentArgs.Gray)
 	if currentArgs.NvCarrier == "" {
 		currentArgs.NvCarrier = config.CarrierID
 	}

@@ -25,6 +25,7 @@ Flags:
       --carrier my_manifest/build.prop   Found in my_manifest/build.prop file, under the `NV_ID` reference, e.g., --carrier=01000100
       --coloros-version string           Override colorOSVersion header, e.g., --coloros-version=ColorOS15.0
       --company-id string                Override companyId header
+      --gray                             Use the CN gray OTA host when region is CN
       --guid string                      Preview GUID, must be a 64-character hexadecimal string
   -h, --help                             help for updater
       --imei string                      IMEI, e.g., --imei=86429XXXXXXXX98
@@ -43,6 +44,7 @@ Examples:
 
 ```shell
 updater RMX5010_11.A --region CN
+updater RMX5010_11.A --region CN --gray
 updater CPH2653_11.A --region EU --model CPH2653EEA
 updater RMX3301 --region IN --anti
 updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011
@@ -51,7 +53,9 @@ updater PJX110_11.A --region CN --pre --guid 0123456789abcdef0123456789abcdef012
 
 When `--anti` is enabled and the input is only a device prefix such as `RMX3301`, the CLI expands `_11.A/_11.C/_11.F/_11.H/_11.J` in `taste` mode, applies the tracker-style `IN` fallback when needed, and returns the best successful result.
 
-The current CLI now covers the existing public Go query fields except for future protocol extensions that are not yet in `QueryUpdateArgs`, such as `components`, `gray`, `graynew`, and `genshin`.
+When `--gray` is enabled with `--region CN`, the query uses the tracker-aligned CN gray host `component-ota-gray.coloros.com` while keeping the normal CN public key and defaults.
+
+The current CLI now covers the existing public Go query fields except for future protocol extensions that are not yet in `QueryUpdateArgs`, such as `components`, `graynew`, and `genshin`.
 
 ## Current request headers
 

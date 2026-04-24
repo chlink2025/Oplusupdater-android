@@ -138,6 +138,14 @@ func TestQueryUpdate_RMX5010_CN(t *testing.T) {
 	}, 560)
 }
 
+func TestQueryUpdate_RMX5010_CN_Gray(t *testing.T) {
+	assertStableUpdate(t, &updater.QueryUpdateArgs{
+		OtaVersion: "RMX5010_11.A",
+		Region:     updater.RegionCn,
+		Gray:       true,
+	}, 560)
+}
+
 func TestQueryUpdate_RMX5011_RU(t *testing.T) {
 	assertStableUpdate(t, &updater.QueryUpdateArgs{
 		OtaVersion: "RMX5011_11.A",

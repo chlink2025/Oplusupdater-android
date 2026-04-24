@@ -8,6 +8,8 @@
 - 补充 `IN / SG` 路径在线回归样本，验证显式 `Model` 与自定义 `NvCarrier` 场景
 - 为 Go 核心新增 `anti` 前缀策略，按 tracker 风格在 `taste` 模式下展开候选版本并返回最佳结果
 - 为 `updater` CLI 增加 `--anti`，并补充本地参数测试与 `RMX3301_IN` 在线回归样本
+- 为 Go 核心新增 tracker 风格的 CN `gray` host 切换，并为 CLI 增加 `--gray`
+- 为 `RMX5010_CN` 增加 `gray` 在线回归样本，锁定 CN 灰度主机查询不回退
 - 统一 `OplusUpdater` Go 模块路径、仓库内导入路径与 CI Go 版本来源
 - 修正 `OplusUpdater/README.md` 的安装说明、CLI 用法与当前协议字段描述
 - 为 `updater` CLI 补充 `guid/pre/language/rom-version/android-version/coloros-version/pipeline-key/operator/company-id` 等高级参数

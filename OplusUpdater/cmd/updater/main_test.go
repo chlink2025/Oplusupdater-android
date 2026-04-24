@@ -52,6 +52,7 @@ func TestQueryArgsFromCommandAdvancedFlags(t *testing.T) {
 	if err := cmd.Flags().Parse([]string{
 		"--guid", validGUID,
 		"--anti",
+		"--gray",
 		"--pre",
 		"--language", "en-IN",
 		"--rom-version", "RMX3301_15.0.0.1410(EX01)",
@@ -74,6 +75,9 @@ func TestQueryArgsFromCommandAdvancedFlags(t *testing.T) {
 	}
 	if !args.Anti {
 		t.Fatal("expected anti flag to be true")
+	}
+	if !args.Gray {
+		t.Fatal("expected gray flag to be true")
 	}
 	if !args.Pre {
 		t.Fatal("expected pre flag to be true")

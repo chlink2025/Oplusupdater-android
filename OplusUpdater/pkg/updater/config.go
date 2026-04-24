@@ -15,7 +15,7 @@ const (
 	RegionCn = "CN"
 	RegionEu = "EU"
 	RegionIn = "IN"
-	
+
 	// 以下为使用 SG Host 的全球及其他地区
 	RegionSg = "SG"
 	RegionRu = "RU"
@@ -29,13 +29,14 @@ const (
 )
 
 const (
-	hostCn = "component-ota-cn.allawntech.com"
-	hostEu = "component-ota-eu.allawnos.com"
-	hostIn = "component-ota-in.allawnos.com"
-	hostSg = "component-ota-sg.allawnos.com"
+	hostCn     = "component-ota-cn.allawntech.com"
+	hostCnGray = "component-ota-gray.coloros.com"
+	hostEu     = "component-ota-eu.allawnos.com"
+	hostIn     = "component-ota-in.allawnos.com"
+	hostSg     = "component-ota-sg.allawnos.com"
 )
 
-func GetConfig(region string) *Config {
+func GetConfig(region string, gray bool) *Config {
 	// 初始化基础配置
 	c := &Config{
 		Version: "2",
@@ -61,7 +62,11 @@ func GetConfig(region string) *Config {
 	// CN Region
 	case RegionCn:
 		c.CarrierID = "10010111"
-		c.Host = hostCn
+		if gray {
+			c.Host = hostCnGray
+		} else {
+			c.Host = hostCn
+		}
 		c.Language = "zh-CN"
 		c.PublicKey = publicKeyCN
 		c.PublicKeyVersion = "1615879139745"
