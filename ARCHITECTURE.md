@@ -87,7 +87,7 @@
 HomeScreen
   -> updater.QueryUpdateArgs (gomobile binding)
   -> OplusUpdater/pkg/updater.QueryUpdate
-  -> Oplus OTA API (/update/v6)
+  -> Oplus OTA API (/update/v3 or /update/v6)
   -> ResponseResult
   -> UpdateQueryResponseCard
   -> UpdateQueryResponse
@@ -153,8 +153,16 @@ pkg/updater/*.go
 
 ### 6.1 Go 核心
 
-- `pkg/updater/updater.go`
-  - `json.Unmarshal(response.Body(), &responseResult)` 的错误被错误地返回成旧 `err`，会隐藏真实 JSON 解析失败原因。
+- 基础协议正确性已在 2026-04-24 收敛一轮
+  - 已对齐主查询链路的关键 Header 字段
+  - 已改为按 `Guid / Pre` 在 `/update/v3` 与 `/update/v6` 间切换
+  - 已拆分 Header `deviceId` 与 Body `deviceId`
+  - 已修复 `QueryUpdate` 返回旧 JSON 解析错误的问题
+
+- 仍缺少高级查询能力
+  - 还没有 `components` 驱动的 Delta OTA 查询
+  - 还没有自定义 `nvid` 入口
+  - 还没有 `anti / gray / graynew / genshin` 等策略型逻辑
 
 - 模块路径与仓库路径不一致
   - `go.mod` 仍声明为 `github.com/Houvven/OplusUpdater`
@@ -192,10 +200,10 @@ pkg/updater/*.go
 
 ## 7. 后续更新建议顺序
 
-### 第一阶段：先稳住 Go 核心与构建基线
+### 第一阶段：收口 Go 核心与构建基线
 
-1. 对齐 `go.mod`、仓库路径与 README 安装说明
-2. 修复 `QueryUpdate` 的 JSON 解析错误处理
+1. 重新生成 `updater.aar`，验证 Android 侧是否已受益于新查询协议
+2. 对齐 `go.mod`、仓库路径与 README 安装说明
 3. 统一 CI 的 Go 版本
 4. 把 gomobile 产物生成流程整理成稳定脚本
 
@@ -222,16 +230,18 @@ pkg/updater/*.go
 - 已审阅 Android 与 Go 主要源码、构建文件、工作流和现有文档
 - 已执行 `OplusUpdater/` 下的 `go test ./...`
 - 已执行 `OplusUpdater/` 下的 `go vet ./...`
+- 已执行 `OplusUpdater/` 下的 `go test ./test -v`
 - 未执行 Gradle 验证
 
 ### 9.2 本轮审查结论
 
-- Go 核心当前可作为下一轮更新的稳定起点
+- Go 核心主查询协议已建立“对齐参考实现 + 在线回归断言”的稳定基线
 - Android 工程不是开箱即构建，先依赖 `gomobile bind` 生成 AAR
 - 后续迭代优先级应为：
-1. 修正 Go 核心与仓库元信息不一致
-2. 拆解 Android 侧状态与 IO 耦合
-3. 处理下载链路与现代存储兼容性
+1. 验证 Android 绑定产物是否已吃到新的 Go 查询修复
+2. 修正 Go 核心与仓库元信息不一致
+3. 拆解 Android 侧状态与 IO 耦合
+4. 处理下载链路与现代存储兼容性
 
 ## 10. To Do List
 
@@ -243,27 +253,19 @@ pkg/updater/*.go
 
 ### P0 查询正确性
 
-1. 以 `OplusUpdater/pkg/updater` 为主战场，优先定位“返回旧 OTA 包”的根因。
-2. 对照仓库中已有的 OTA 请求样例与 `OplusUpdater/README.md` 记录，核对当前请求头和请求体缺失字段。
-3. 重点检查并补齐 `QueryUpdate` 中影响服务端命中结果的关键字段。
-字段优先关注：`newLanguage`、`romVersion`、`androidVersion`、`colorOSVersion`、`infVersion`、`pipelineKey`、`companyId`、`prjNum`、`brand`、`brandSota`、`osType`、`components`、`securityPatch`、`strategyVersion`、`sota`、`cota`、`opex`。
-4. 修正 `pkg/updater/updater.go` 中 `json.Unmarshal(response.Body(), &responseResult)` 的错误处理，确保能看到真实解析错误。
-5. 在修复后，以几个典型机型和区域重新确认：返回的是当前可用 OTA，而不是明显过期的历史包。
+1. 已完成：对齐 `OplusUpdater/pkg/updater` 主查询协议，修正“返回旧 OTA 包”的主根因。
+2. 已完成：补齐当前主链路所需的关键字段和 endpoint 切换逻辑。
+3. 已完成：修正 `QueryUpdate` 的 JSON 解析错误返回。
+4. 已完成：用典型机型和区域样本确认当前返回不再明显回退到旧包。
+5. 待完成：重新生成 `updater.aar` 并在 Android UI 侧复核同样的结果。
 
 ### P1 回归测试
 
-1. 把 `OplusUpdater/test/` 从“打印结果”升级为“断言结果”。
-2. 至少覆盖 `CN / EU / IN / SG系区域` 这些不同配置路径。
-3. 断言重点不是固定版本号，而是：
-- `responseCode` 正常
-- `otaVersion` / `versionName` 非空
-- 返回结果不是明显旧包
-- 解密后的 `body` 能稳定解析
-4. 对纯本地逻辑补单元测试：
-- 区域配置映射
-- `deviceId` 生成
-- `protectedKey` 生成
-- 请求参数补全逻辑
+1. 已完成：把 `OplusUpdater/test/` 从“打印结果”升级为“断言结果”。
+2. 已完成：覆盖 `CN / EU / IN / SG / RU / TR / TH` 等不同配置路径。
+3. 已完成：对稳定样本添加“版本号不回退”的下限断言，并为 `taste` 无结果场景固化协议预期。
+4. 已完成：对纯本地逻辑补充单元测试，覆盖参数补全、请求头、请求体、endpoint 与默认 `deviceId`。
+5. 已完成：补 `IN / SG系` 的在线回归样本，其中 `IN` 通过显式 `Model` 覆盖，`SG` 通过自定义 `NvCarrier` 覆盖。
 
 ### P2 Go 核心整理
 
