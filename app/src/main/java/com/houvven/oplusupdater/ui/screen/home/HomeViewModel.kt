@@ -16,7 +16,17 @@ import updater.QueryUpdateArgs
 import updater.ResponseResult
 import updater.Updater
 
+data class HomeFormState(
+    val otaVersion: String = "",
+    val model: String = "",
+    val carrier: String = "",
+    val otaRegion: OtaRegion = OtaRegion.CN,
+    val updateMode: UpdateMode = UpdateMode.STABLE,
+    val expandMoreParameters: Boolean = true,
+)
+
 data class HomeUiState(
+    val formState: HomeFormState = HomeFormState(),
     val isQuerying: Boolean = false,
     val responseResult: ResponseResult? = null,
     val historyList: List<HistoryUtils.HistoryItem> = emptyList(),
@@ -25,7 +35,9 @@ data class HomeUiState(
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val appContext = application.applicationContext
 
-    private val _uiState = MutableStateFlow(HomeUiState())
+    private val _uiState = MutableStateFlow(
+        HomeUiState(formState = buildInitialFormState())
+    )
     val uiState = _uiState.asStateFlow()
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
@@ -33,6 +45,72 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         refreshHistory()
+    }
+
+    fun onOtaVersionChange(otaVersion: String) {
+        _uiState.update { state ->
+            val region = state.formState.otaRegion
+            state.copy(
+                formState = state.formState.copy(
+                    otaVersion = otaVersion,
+                    model = deriveModel(otaVersion, region),
+                )
+            )
+        }
+    }
+
+    fun onModelChange(model: String) {
+        _uiState.update { state ->
+            state.copy(formState = state.formState.copy(model = model))
+        }
+    }
+
+    fun onCarrierChange(carrier: String) {
+        _uiState.update { state ->
+            state.copy(formState = state.formState.copy(carrier = carrier))
+        }
+    }
+
+    fun onRegionChange(region: OtaRegion) {
+        _uiState.update { state ->
+            state.copy(
+                formState = state.formState.copy(
+                    otaRegion = region,
+                    model = deriveModel(state.formState.otaVersion, region),
+                    carrier = defaultCarrier(region),
+                )
+            )
+        }
+    }
+
+    fun onUpdateModeChange(updateMode: UpdateMode) {
+        _uiState.update { state ->
+            state.copy(formState = state.formState.copy(updateMode = updateMode))
+        }
+    }
+
+    fun toggleMoreParameters() {
+        _uiState.update { state ->
+            state.copy(
+                formState = state.formState.copy(
+                    expandMoreParameters = !state.formState.expandMoreParameters
+                )
+            )
+        }
+    }
+
+    fun applyHistoryItem(item: HistoryUtils.HistoryItem) {
+        _uiState.update { state ->
+            val region = runCatching { OtaRegion.valueOf(item.region) }.getOrDefault(OtaRegion.CN)
+            state.copy(
+                formState = state.formState.copy(
+                    otaVersion = item.otaVersion,
+                    model = item.model,
+                    carrier = item.carrier,
+                    otaRegion = region,
+                )
+            )
+        }
     }
 
     fun refreshHistory() {
@@ -48,10 +126,25 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun queryUpdate(args: QueryUpdateArgs, historyItem: HistoryUtils.HistoryItem) {
+    fun queryUpdate() {
         if (_uiState.value.isQuerying) {
             return
         }
+
+        val formState = _uiState.value.formState
+        val args = QueryUpdateArgs().also {
+            it.otaVersion = formState.otaVersion
+            it.region = formState.otaRegion.name
+            it.model = formState.model
+            it.nvCarrier = formState.carrier
+            it.mode = formState.updateMode.value
+        }
+        val historyItem = HistoryUtils.HistoryItem(
+            otaVersion = formState.otaVersion,
+            region = formState.otaRegion.name,
+            model = formState.model,
+            carrier = formState.carrier,
+        )
 
         viewModelScope.launch(Dispatchers.IO) {
             HistoryUtils.saveHistory(appContext, historyItem)
@@ -86,5 +179,29 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 _messages.emit(e.message ?: e.stackTraceToString())
             }
         }
+    }
+
+    private fun buildInitialFormState(): HomeFormState {
+        val otaVersion = systemOtaVersion
+        val region = OtaRegion.CN
+        return HomeFormState(
+            otaVersion = otaVersion,
+            model = deriveModel(otaVersion, region),
+            carrier = defaultCarrier(region),
+            otaRegion = region,
+        )
+    }
+
+    private fun deriveModel(otaVersion: String, region: OtaRegion): String {
+        val baseModel = otaVersion.split("_").firstOrNull()?.takeIf { it.isNotBlank() } ?: return ""
+        return when (region) {
+            OtaRegion.EU -> baseModel + "EEA"
+            OtaRegion.IN -> baseModel + "IN"
+            else -> baseModel
+        }
+    }
+
+    private fun defaultCarrier(region: OtaRegion): String {
+        return Updater.getConfig(region.name, false).carrierID
     }
 }

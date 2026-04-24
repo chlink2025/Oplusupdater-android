@@ -24,7 +24,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +52,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.extra.SuperDropdown
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import updater.Updater
 
 @Keep
 enum class OtaRegion(
@@ -89,34 +87,11 @@ val systemOtaVersion: String by lazy {
 fun HomeScreen() {
     val homeViewModel: HomeViewModel = viewModel()
     val uiState by homeViewModel.uiState.collectAsState()
+    val formState = uiState.formState
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
     var showAboutInfoDialog by remember { mutableStateOf(false) }
-    var updateMode by rememberSaveable { mutableStateOf(UpdateMode.STABLE) }
-    var expandMoreParameters by rememberSaveable { mutableStateOf(true) }
-    var otaVersion by rememberSaveable { mutableStateOf(systemOtaVersion) }
-    var model by rememberSaveable { mutableStateOf("") }
-    var carrier by rememberSaveable { mutableStateOf("") }
-    var otaRegion by rememberSaveable { mutableStateOf(OtaRegion.CN) }
-
-    LaunchedEffect(otaVersion, otaRegion) {
-        otaVersion.split("_").firstOrNull()?.let {
-            if (it.isBlank()) {
-                model = ""
-                return@let
-            }
-            model = when (otaRegion) {
-                OtaRegion.EU -> it + "EEA"
-                OtaRegion.IN -> it + "IN"
-                else -> it
-            }
-        }
-    }
-
-    LaunchedEffect(otaRegion) {
-        carrier = Updater.getConfig(otaRegion.name, false).carrierID
-    }
 
     LaunchedEffect(homeViewModel) {
         homeViewModel.messages.collectLatest {
@@ -152,14 +127,14 @@ fun HomeScreen() {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             TextField(
-                value = otaVersion,
-                onValueChange = { otaVersion = it.trim() },
+                value = formState.otaVersion,
+                onValueChange = { homeViewModel.onOtaVersionChange(it.trim()) },
                 label = stringResource(R.string.ota_version),
                 trailingIcon = {
                     IconButton(
-                        onClick = { expandMoreParameters = !expandMoreParameters }
+                        onClick = { homeViewModel.toggleMoreParameters() }
                     ) {
-                        val icon = if (expandMoreParameters) {
+                        val icon = if (formState.expandMoreParameters) {
                             Icons.Outlined.ExpandLess
                         } else {
                             Icons.Outlined.ExpandMore
@@ -173,7 +148,7 @@ fun HomeScreen() {
                 }
             )
 
-            AnimatedVisibility(visible = expandMoreParameters) {
+            AnimatedVisibility(visible = formState.expandMoreParameters) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -183,15 +158,15 @@ fun HomeScreen() {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         TextField(
-                            value = model,
-                            onValueChange = { model = it.trim() },
+                            value = formState.model,
+                            onValueChange = { homeViewModel.onModelChange(it.trim()) },
                             modifier = Modifier
                                 .weight(1f),
                             label = stringResource(R.string.model)
                         )
                         TextField(
-                            value = carrier,
-                            onValueChange = { carrier = it.trim() },
+                            value = formState.carrier,
+                            onValueChange = { homeViewModel.onCarrierChange(it.trim()) },
                             modifier = Modifier
                                 .weight(1f),
                             label = stringResource(R.string.carrier)
@@ -208,9 +183,9 @@ fun HomeScreen() {
                 SuperDropdown(
                     title = stringResource(R.string.region),
                     items = OtaRegion.entries.map { stringResource(it.strRes) },
-                    selectedIndex = OtaRegion.entries.indexOf(otaRegion)
+                    selectedIndex = OtaRegion.entries.indexOf(formState.otaRegion)
                 ) {
-                    otaRegion = OtaRegion.entries[it]
+                    homeViewModel.onRegionChange(OtaRegion.entries[it])
                 }
             }
 
@@ -222,9 +197,9 @@ fun HomeScreen() {
                 SuperDropdown(
                     title = stringResource(R.string.update_mode),
                     items = UpdateMode.entries.map { stringResource(it.strRes) },
-                    selectedIndex = UpdateMode.entries.indexOf(updateMode)
+                    selectedIndex = UpdateMode.entries.indexOf(formState.updateMode)
                 ) {
-                    updateMode = UpdateMode.entries[it]
+                    homeViewModel.onUpdateModeChange(UpdateMode.entries[it])
                 }
             }
             
@@ -232,14 +207,7 @@ fun HomeScreen() {
             com.houvven.oplusupdater.ui.screen.home.components.SearchHistoryView(
                 historyList = uiState.historyList,
                 onHistorySelect = { item ->
-                    otaVersion = item.otaVersion
-                    model = item.model
-                    carrier = item.carrier
-                    try {
-                        otaRegion = OtaRegion.valueOf(item.region)
-                    } catch (e: Exception) {
-                        // ignore invalid region
-                    }
+                    homeViewModel.applyHistoryItem(item)
                 },
                 onClearHistory = {
                     homeViewModel.clearHistory()
@@ -249,22 +217,12 @@ fun HomeScreen() {
             Button(
                 onClick = {
                     focusManager.clearFocus()
-                    val args = updater.QueryUpdateArgs().also {
-                        it.otaVersion = otaVersion
-                        it.region = otaRegion.name
-                        it.model = model
-                        it.nvCarrier = carrier
-                        it.mode = updateMode.value
-                    }
-                    homeViewModel.queryUpdate(
-                        args = args,
-                        com.houvven.oplusupdater.utils.HistoryUtils.HistoryItem(otaVersion, otaRegion.name, model, carrier)
-                    )
+                    homeViewModel.queryUpdate()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
-                enabled = otaVersion.isNotBlank(),
+                enabled = formState.otaVersion.isNotBlank(),
                 colors = ButtonDefaults.buttonColorsPrimary(),
             ) {
                 if (uiState.isQuerying) {
