@@ -22,9 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,7 +88,6 @@ fun HomeScreen() {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
-    var showAboutInfoDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(homeViewModel) {
         homeViewModel.messages.collectLatest {
@@ -105,7 +101,7 @@ fun HomeScreen() {
                 title = stringResource(R.string.app_name),
                 actions = {
                     IconButton(onClick = {
-                        showAboutInfoDialog = true
+                        homeViewModel.showAboutInfoDialog()
                     }) {
                         Icon(
                             imageVector = Icons.Outlined.Info,
@@ -245,9 +241,9 @@ fun HomeScreen() {
                 uiState.responseResult?.let { UpdateQueryResponseCard(it) }
             }
 
-            if (showAboutInfoDialog) {
+            if (uiState.showAboutInfoDialog) {
                 AboutInfoDialog(
-                    onDismissRequest = { showAboutInfoDialog = false }
+                    onDismissRequest = { homeViewModel.hideAboutInfoDialog() }
                 )
             }
         }

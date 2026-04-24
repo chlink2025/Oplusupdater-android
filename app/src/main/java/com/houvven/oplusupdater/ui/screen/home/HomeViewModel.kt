@@ -27,6 +27,7 @@ data class HomeFormState(
 
 data class HomeUiState(
     val formState: HomeFormState = HomeFormState(),
+    val showAboutInfoDialog: Boolean = false,
     val isQuerying: Boolean = false,
     val responseResult: ResponseResult? = null,
     val historyList: List<HistoryUtils.HistoryItem> = emptyList(),
@@ -110,6 +111,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     otaRegion = region,
                 )
             )
+        }
+    }
+
+    fun showAboutInfoDialog() {
+        _uiState.update { state ->
+            state.copy(showAboutInfoDialog = true)
+        }
+    }
+
+    fun hideAboutInfoDialog() {
+        _uiState.update { state ->
+            state.copy(showAboutInfoDialog = false)
         }
     }
 
