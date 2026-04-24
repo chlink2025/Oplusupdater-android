@@ -154,6 +154,14 @@ func TestQueryUpdate_RMX3301_IN(t *testing.T) {
 	}, 4210)
 }
 
+func TestQueryUpdate_RMX3301_IN_Anti(t *testing.T) {
+	assertStableUpdate(t, &updater.QueryUpdateArgs{
+		OtaVersion: "RMX3301",
+		Region:     updater.RegionIn,
+		Anti:       true,
+	}, 3290)
+}
+
 func TestQueryUpdate_RMX3301_SG_CustomCarrier(t *testing.T) {
 	assertStableUpdate(t, &updater.QueryUpdateArgs{
 		OtaVersion: "RMX3301_11.H",

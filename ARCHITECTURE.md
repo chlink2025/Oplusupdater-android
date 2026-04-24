@@ -161,12 +161,8 @@ pkg/updater/*.go
 
 - 仍缺少高级查询能力
   - 还没有 `components` 驱动的 Delta OTA 查询
-  - 还没有自定义 `nvid` 入口
-  - 还没有 `anti / gray / graynew / genshin` 等策略型逻辑
-
-- Go CLI 与 Go API 暴露面不一致
-  - `QueryUpdateArgs` 已支持更多协议字段
-  - CLI 目前仍只暴露公共常用参数，没有把高级字段开放成 flags
+  - `NvCarrier` 已可覆盖，但还没有更贴近 tracker 命名的 `nvid` 封装入口
+  - 已完成首版 `anti` 前缀策略，`gray / graynew / genshin` 仍未迁移
 
 ### 6.2 Android UI
 
@@ -201,7 +197,7 @@ pkg/updater/*.go
 1. 重新生成 `updater.aar`，验证 Android 侧是否已受益于新查询协议
 2. 继续收敛 `OplusUpdater/README.md` 与实际协议暴露面
 3. 把 gomobile 产物生成流程整理成稳定脚本
-4. 评估是否需要把部分高级查询字段暴露到 CLI，而不是只停留在 Go API
+4. 评估未来新增的 `components / gray / graynew / genshin` 等能力是否需要继续进入 CLI
 
 ### 第二阶段：拆 Android 的状态边界
 
@@ -268,8 +264,9 @@ pkg/updater/*.go
 1. 已完成：统一 `go.mod` 模块路径与当前仓库地址。
 2. 已完成：修正 `OplusUpdater/README.md` 中过期的安装和 CLI 用法说明。
 3. 已完成：让 CI 通过 `go-version-file` 与 `go.mod` / `toolchain` 自动对齐。
-4. 待完成：评估是否把部分高级查询字段开放到 CLI。
-5. 待完成：继续把“构造请求”拆成更小的职责块，避免 `QueryUpdate` 继续膨胀。
+4. 已完成：把当前 `QueryUpdateArgs` 已支持的高级字段开放到 CLI，并补本地参数测试。
+5. 已完成：将 `QueryUpdate` 拆成单次查询与 `anti` 策略层，并补本地策略测试与在线回归样本。
+6. 待完成：继续把 `gray / graynew / genshin / components` 等差异能力逐步迁入，同时控制 `QueryUpdateArgs` 的复杂度。
 
 ### P3 Android 绑定与客户端
 

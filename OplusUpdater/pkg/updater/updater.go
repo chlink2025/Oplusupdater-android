@@ -23,6 +23,7 @@ type QueryUpdateArgs struct {
 	IMEI           string
 	Proxy          string
 	Guid           string
+	Anti           bool
 	Pre            bool
 	CustomLanguage string
 	RomVersion     string
@@ -34,26 +35,11 @@ type QueryUpdateArgs struct {
 }
 
 func (args *QueryUpdateArgs) post() {
-	args.OtaVersion = strings.TrimSpace(args.OtaVersion)
-	if len(strings.Split(args.OtaVersion, "_")) < 3 || len(strings.Split(args.OtaVersion, ".")) < 3 {
-		args.OtaVersion += ".01_0001_197001010000"
-	}
-
-	if region := strings.TrimSpace(args.Region); region == "" {
-		args.Region = RegionCn
-	} else {
-		args.Region = strings.ToUpper(region)
-	}
+	args.OtaVersion = normalizeOTAVersion(args.OtaVersion)
+	args.Region = normalizeRegion(args.Region)
 
 	if model := strings.TrimSpace(args.Model); model == "" {
-		baseModel := strings.Split(args.OtaVersion, "_")[0]
-		suffix := ""
-		if args.Region == RegionEu {
-			suffix = "EEA"
-		} else if args.Region == RegionIn {
-			suffix = "IN"
-		}
-		args.Model = baseModel + suffix
+		args.Model = defaultModelForSingleQuery(args.OtaVersion, args.Region)
 	} else {
 		args.Model = model
 	}
@@ -143,11 +129,24 @@ func QueryUpdate(args *QueryUpdateArgs) (*ResponseResult, error) {
 		return nil, fmt.Errorf("query args cannot be nil")
 	}
 
-	args.post()
+	if args.Anti && !isSimpleOTAVersion(args.OtaVersion) {
+		return queryUpdateAnti(args, queryUpdateOnce)
+	}
 
-	config := GetConfig(args.Region)
-	if args.NvCarrier == "" {
-		args.NvCarrier = config.CarrierID
+	return queryUpdateOnce(args)
+}
+
+func queryUpdateOnce(args *QueryUpdateArgs) (*ResponseResult, error) {
+	if args == nil {
+		return nil, fmt.Errorf("query args cannot be nil")
+	}
+
+	currentArgs := cloneQueryUpdateArgs(args)
+	currentArgs.post()
+
+	config := GetConfig(currentArgs.Region)
+	if currentArgs.NvCarrier == "" {
+		currentArgs.NvCarrier = config.CarrierID
 	}
 
 	iv, err := RandomIv()
@@ -166,12 +165,12 @@ func QueryUpdate(args *QueryUpdateArgs) (*ResponseResult, error) {
 	}
 
 	headerDeviceID := GenerateDefaultDeviceId()
-	if imei := strings.TrimSpace(args.IMEI); imei != "" {
+	if imei := strings.TrimSpace(currentArgs.IMEI); imei != "" {
 		headerDeviceID = GenerateDeviceId(imei)
 	}
-	bodyDeviceID := strings.ToLower(strings.TrimSpace(args.Guid))
+	bodyDeviceID := strings.ToLower(strings.TrimSpace(currentArgs.Guid))
 
-	requestHeaders, err := buildRequestHeaders(args, config, headerDeviceID, protectedKey)
+	requestHeaders, err := buildRequestHeaders(currentArgs, config, headerDeviceID, protectedKey)
 	if err != nil {
 		return nil, err
 	}
@@ -198,11 +197,11 @@ func QueryUpdate(args *QueryUpdateArgs) (*ResponseResult, error) {
 	requestURL := url.URL{
 		Host:   config.Host,
 		Scheme: "https",
-		Path:   resolveUpdatePath(args),
+		Path:   resolveUpdatePath(currentArgs),
 	}
 
 	client := resty.New()
-	if proxy := strings.TrimSpace(args.Proxy); proxy != "" {
+	if proxy := strings.TrimSpace(currentArgs.Proxy); proxy != "" {
 		client.SetProxy(proxy)
 	}
 

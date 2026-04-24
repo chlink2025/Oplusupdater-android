@@ -17,16 +17,26 @@ $ updater -h
 Use Oplus official api to query OPlus,OPPO and Realme Mobile 's OS version update.
 
 Usage:
-  updater [otaVersion] [flags]
+  updater <otaVersion> [flags]
 
 Flags:
+      --anti                             Expand a device prefix through the anti taste strategy before selecting the best result
+      --android-version string           Override androidVersion header, e.g., --android-version=Android 15
       --carrier my_manifest/build.prop   Found in my_manifest/build.prop file, under the `NV_ID` reference, e.g., --carrier=01000100
+      --coloros-version string           Override colorOSVersion header, e.g., --coloros-version=ColorOS15.0
+      --company-id string                Override companyId header
+      --guid string                      Preview GUID, must be a 64-character hexadecimal string
   -h, --help                             help for updater
       --imei string                      IMEI, e.g., --imei=86429XXXXXXXX98
+      --language string                  Override request language tag, e.g., --language=en-IN
       --mode string                      Mode: manual (stable, default) or taste (public testing), e.g., --mode=manual (default "manual")
       --model string                     Device model, e.g., --model=RMX3820
+      --operator string                  Override operator header, defaults to pipelineKey when omitted
+      --pipeline-key string              Override pipelineKey header, defaults to ALLNET when omitted
+      --pre                              Use preview query path, typically with --guid
   -p, --proxy string                     Proxy server, e.g., --proxy=type://@host:port or --proxy=type://user:password@host:port, support http and socks proxy
       --region string                    Server zone: CN (default), EU, IN, SG, RU, TR, TH, GL (Global), ID, TW, MY, VN, e.g., --region=CN (default "CN")
+      --rom-version string               Override romVersion header, e.g., --rom-version=RMX3301_15.0.0.1410(EX01)
 ```
 
 Examples:
@@ -34,10 +44,14 @@ Examples:
 ```shell
 updater RMX5010_11.A --region CN
 updater CPH2653_11.A --region EU --model CPH2653EEA
+updater RMX3301 --region IN --anti
 updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011
+updater PJX110_11.A --region CN --pre --guid 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 ```
 
-Current CLI exposes only the common query fields above. Advanced protocol fields such as `Guid`, `Pre`, `CustomLanguage`, `RomVersion`, `AndroidVersion`, `ColorOSVersion`, `PipelineKey`, `Operator`, and `CompanyID` are available through the Go API, not through CLI flags yet.
+When `--anti` is enabled and the input is only a device prefix such as `RMX3301`, the CLI expands `_11.A/_11.C/_11.F/_11.H/_11.J` in `taste` mode, applies the tracker-style `IN` fallback when needed, and returns the best successful result.
+
+The current CLI now covers the existing public Go query fields except for future protocol extensions that are not yet in `QueryUpdateArgs`, such as `components`, `gray`, `graynew`, and `genshin`.
 
 ## Current request headers
 
