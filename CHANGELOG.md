@@ -31,6 +31,8 @@
 - 重新生成 `OplusUpdater/updater.aar` 与 `OplusUpdater/updater-sources.jar`
 - 修复 Android 侧对 `Updater.getConfig(region, gray)` 新签名的调用适配
 - 验证 Android `:app:assembleDebug` 通过，确认新的 Go 绑定可被 UI 层消费
+- 修复 `UpdateQueryResponseCard.kt` 中“所有组件复用第一个组件下载 URL”的问题，并让 `PartitionListView` 按组件使用各自的最终下载地址
+- 新增 `OplusUpdater/tools.go`，用工具依赖固定 `golang.org/x/mobile/bind`，避免 `go mod tidy` 后 `gomobile bind` 失效
 - 补充 `README.md`、`README_EN.md`、`SPEC.md` 与 `ARCHITECTURE.md` 的 `go1.26.2` / `gomobile` / Android 联调说明
 - 调整 README 定位为项目介绍，将审查结论收敛到架构文档
 - 在 `ARCHITECTURE.md` 中新增分阶段 To Do List，明确先修 OTA 查询正确性

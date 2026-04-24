@@ -145,6 +145,7 @@ pkg/updater/*.go
 ### 4.3 当前已验证的绑定构建前提
 
 - 使用 `golang.org/x/mobile/cmd/gomobile` 生成 Android 绑定
+- `OplusUpdater/tools.go` 固定保留 `golang.org/x/mobile/bind` 在模块图中
 - 生成前执行 `gomobile init`
 - Windows 本地生成时显式设置 `JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8`
 - 在线测试与绑定前清理代理环境变量，避免请求被错误转发
@@ -176,10 +177,6 @@ pkg/updater/*.go
 - `HomeScreen.kt`
   - `MutableSharedFlow` 未 `remember`，重组后可能丢失消息通道。
   - 页面同时承担输入、请求、消息、历史、结果渲染触发，状态职责偏重。
-
-- `UpdateQueryResponseCard.kt`
-  - 只解析第一个组件的 URL，却把解析结果复用到所有组件卡片。
-  - `PartitionListView` 也默认使用第一个组件的下载地址。
 
 - `UpdateLogDialog.kt`
   - 直接加载远程 HTML 到 `WebView`，缺少统一的加载错误处理与安全边界说明。
@@ -278,12 +275,13 @@ pkg/updater/*.go
 6. 已完成：补齐 tracker 风格的 CN `gray` host 选择，并增加 `--gray` 与在线回归样本。
 7. 已完成：补齐 tracker 风格的 `graynew` 双阶段前缀查询，并增加 `--graynew` 与在线回归样本。
 8. 已完成：补齐 tracker 风格的 `components` 请求体注入，并增加 CLI 参数与本地解析测试。
-9. 待完成：为 `genshin` 与 `components` 补稳定的在线专项回归样本，并继续评估后续 tracker 差异能力。
+9. 已完成：通过 `tools.go` 固定 `golang.org/x/mobile/bind` 工具依赖，避免 `go mod tidy` 后 `gomobile bind` 失效。
+10. 待完成：为 `genshin` 与 `components` 补稳定的在线专项回归样本，并继续评估后续 tracker 差异能力。
 
 ### P3 Android 绑定与客户端
 
 1. 已完成：确认 Go 修复后，Android 已通过新的 `updater.aar` 获取更新后的查询逻辑，并完成 `getConfig(region, gray)` 签名适配。
-2. 修正 `UpdateQueryResponseCard.kt` 中“复用第一个组件 URL 到全部组件”的问题。
+2. 已完成：修正 `UpdateQueryResponseCard.kt` 中“复用第一个组件 URL 到全部组件”的问题，并让分区解析入口按组件使用各自的最终下载地址。
 3. 修正 `HomeScreen.kt` 中 `MutableSharedFlow` 未 `remember` 的状态风险。
 4. 之后再考虑引入 `ViewModel`，不要在查询主链路未稳定前提前做大重构。
 

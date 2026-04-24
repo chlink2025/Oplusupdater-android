@@ -24,6 +24,7 @@ import com.houvven.oplusupdater.utils.StorageUnitUtil
 import com.houvven.oplusupdater.utils.toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import top.yukonga.miuix.kmp.basic.BasicComponentColors
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
@@ -107,49 +108,45 @@ private fun UpdateQueryResponseCardContent(
     modifier: Modifier = Modifier,
     response: UpdateQueryResponse,
 ) = with(response) {
-    val context = LocalContext.current
-    val clipboard = LocalClipboard.current
-    val coroutineScope = rememberCoroutineScope()
+    val firstComponentUrl = components?.firstOrNull()?.componentPackets?.url
 
     var showUpdateLogDialog by remember { mutableStateOf(false) }
-    
-    // Metadata parsing state
+
     var buildTime by remember { mutableStateOf<String?>(null) }
     var metadataSecurityPatch by remember { mutableStateOf<String?>(null) }
-    
-    // URL resolution state
-    var resolvedUrlInfo by remember { mutableStateOf<DownloadUrlResolver.ResolvedUrl?>(null) }
 
-    // Fetch metadata from remote ZIP
-    LaunchedEffect(response) {
-        val url = response.components?.firstOrNull()?.componentPackets?.url
-        if (!url.isNullOrEmpty()) {
-            coroutineScope.launch(Dispatchers.IO) {
-                try {
-                    // Resolve URL first if needed
-                    val resolved = DownloadUrlResolver.resolveUrl(url)
-                    resolvedUrlInfo = resolved
-                    
-                    // Use resolved URL for metadata fetching
-                    val urlToUse = resolved.getDownloadUrl()
-                    val metadata = com.houvven.oplusupdater.utils.MetadataUtils.getMetadata(urlToUse)
-                    if (metadata.isNotEmpty()) {
-                        val timestamp = com.houvven.oplusupdater.utils.MetadataUtils.getMetadataValue(metadata, "post-timestamp=")
-                        if (timestamp.isNotEmpty()) {
-                            runCatching {
-                                val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
-                                buildTime = sdf.format(Date(timestamp.toLong() * 1000))
-                            }
-                        }
-                        val patchLevel = com.houvven.oplusupdater.utils.MetadataUtils.getMetadataValue(metadata, "post-security-patch-level=")
-                        if (patchLevel.isNotEmpty()) {
-                            metadataSecurityPatch = patchLevel
-                        }
+    LaunchedEffect(firstComponentUrl) {
+        buildTime = null
+        metadataSecurityPatch = null
+
+        if (firstComponentUrl.isNullOrEmpty()) {
+            return@LaunchedEffect
+        }
+
+        try {
+            val resolved = withContext(Dispatchers.IO) {
+                DownloadUrlResolver.resolveUrl(firstComponentUrl)
+            }
+            val urlToUse = resolved.getDownloadUrl()
+            val metadata = withContext(Dispatchers.IO) {
+                com.houvven.oplusupdater.utils.MetadataUtils.getMetadata(urlToUse)
+            }
+
+            if (metadata.isNotEmpty()) {
+                val timestamp = com.houvven.oplusupdater.utils.MetadataUtils.getMetadataValue(metadata, "post-timestamp=")
+                if (timestamp.isNotEmpty()) {
+                    runCatching {
+                        val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
+                        buildTime = sdf.format(Date(timestamp.toLong() * 1000))
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                }
+                val patchLevel = com.houvven.oplusupdater.utils.MetadataUtils.getMetadataValue(metadata, "post-security-patch-level=")
+                if (patchLevel.isNotEmpty()) {
+                    metadataSecurityPatch = patchLevel
                 }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -202,91 +199,9 @@ private fun UpdateQueryResponseCardContent(
 
         components?.forEach { component ->
             val componentPackets = component?.componentPackets ?: return@forEach
-            Card {
-                val size = componentPackets.size?.toLongOrNull()?.let(StorageUnitUtil::formatSize)
-
-                SuperArrowWrapper(
-                    title = stringResource(R.string.packet_name),
-                    summary = component.componentName,
-                    rightText = size
-                )
-                componentPackets.manualUrl?.let {
-                    // Get the final download URL (resolved if needed, otherwise original)
-                    val finalDownloadUrl = resolvedUrlInfo?.getDownloadUrl() ?: componentPackets.url
-                    val originalUrl = componentPackets.url
-                    val wasResolved = resolvedUrlInfo?.needsResolution == true && resolvedUrlInfo?.resolvedUrl != null
-                    
-                    // Show release time if available (only for resolved URLs)
-
-                    
-                    // Show original URL first if resolution was needed
-                    if (wasResolved) {
-                        SuperArrowWrapper(
-                            title = stringResource(R.string.original_url),
-                            summary = originalUrl,
-                            onClick = {
-                                val urlToCopy = originalUrl ?: return@SuperArrowWrapper
-                                coroutineScope.launch {
-                                    clipboard.setClipEntry(ClipData.newPlainText("original_url", urlToCopy).toClipEntry())
-                                }
-                                context.toast(R.string.copied)
-                            }
-                        )
-                    }
-                    
-                    // Always show the final download URL (resolved or original)
-                    SuperArrowWrapper(
-                        title = stringResource(R.string.packet_url),
-                        summary = finalDownloadUrl,
-                        onClick = {
-                            val urlToCopy = finalDownloadUrl ?: return@SuperArrowWrapper
-                            coroutineScope.launch {
-                                clipboard.setClipEntry(ClipData.newPlainText("url", urlToCopy).toClipEntry())
-                            }
-                            context.toast(R.string.copied)
-                        }
-                    )
-                    resolvedUrlInfo?.getFormattedExpiresTime()?.let { expiresTime ->
-                        SuperArrowWrapper(
-                            title = stringResource(R.string.release_time),
-                            summary = expiresTime
-                        )
-                    }
-                    // Show error if resolution failed
-                    if (resolvedUrlInfo?.needsResolution == true && resolvedUrlInfo?.error != null) {
-                        SuperArrowWrapper(
-                            title = stringResource(R.string.url_resolve_failed),
-                            summary = resolvedUrlInfo?.error
-                        )
-                    }
-                }
-                componentPackets.md5?.let {
-                    SuperArrowWrapper(
-                        title = stringResource(R.string.packet_md5),
-                        summary = componentPackets.md5,
-                        onClick = {
-                            coroutineScope.launch {
-                                clipboard.setClipEntry(ClipData.newPlainText(it, it).toClipEntry())
-                            }
-                            context.toast(R.string.copied)
-                        }
-                    )
-                }
-            }
-        }
-        
-        // Partition List View - Parse payload.bin to show partitions
-        // Only show after URL resolution is complete (if needed)
-        val originalUrl = components?.firstOrNull()?.componentPackets?.url
-        val needsResolve = originalUrl?.contains("/downloadCheck") == true
-        val actualDownloadUrl = when {
-            resolvedUrlInfo != null -> resolvedUrlInfo?.getDownloadUrl()
-            !needsResolve && originalUrl != null -> originalUrl
-            else -> null // Still resolving, wait
-        }
-        if (actualDownloadUrl != null) {
-            PartitionListView(
-                downloadUrl = actualDownloadUrl,
+            ComponentPacketCard(
+                componentName = component.componentName,
+                componentPackets = componentPackets,
                 systemVersion = realOtaVersion ?: otaVersion ?: "Unknown"
             )
         }
@@ -299,5 +214,111 @@ private fun UpdateQueryResponseCardContent(
             softwareVersion = versionName ?: stringResource(R.string.unknown_version),
             onDismissRequest = { showUpdateLogDialog = false }
         )
+    }
+}
+
+@Composable
+private fun ComponentPacketCard(
+    componentName: String?,
+    componentPackets: UpdateQueryResponse.Component.ComponentPackets,
+    systemVersion: String,
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
+    val originalUrl = componentPackets.url
+    val needsResolve = originalUrl?.contains("/downloadCheck") == true
+    val size = componentPackets.size?.toLongOrNull()?.let(StorageUnitUtil::formatSize)
+
+    var resolvedUrlInfo by remember(originalUrl) {
+        mutableStateOf<DownloadUrlResolver.ResolvedUrl?>(null)
+    }
+
+    LaunchedEffect(originalUrl) {
+        resolvedUrlInfo = null
+        if (originalUrl.isNullOrEmpty() || !needsResolve) {
+            return@LaunchedEffect
+        }
+
+        resolvedUrlInfo = withContext(Dispatchers.IO) {
+            runCatching { DownloadUrlResolver.resolveUrl(originalUrl) }.getOrElse {
+                it.printStackTrace()
+                DownloadUrlResolver.ResolvedUrl(
+                    originalUrl = originalUrl,
+                    resolvedUrl = null,
+                    needsResolution = true,
+                    error = it.message
+                )
+            }
+        }
+    }
+
+    val finalDownloadUrl = when {
+        resolvedUrlInfo != null -> resolvedUrlInfo?.getDownloadUrl()
+        !originalUrl.isNullOrEmpty() -> originalUrl
+        else -> null
+    }
+    val wasResolved = resolvedUrlInfo?.needsResolution == true && resolvedUrlInfo?.resolvedUrl != null
+
+    Card {
+        SuperArrowWrapper(
+            title = stringResource(R.string.packet_name),
+            summary = componentName,
+            rightText = size
+        )
+        if (wasResolved) {
+            SuperArrowWrapper(
+                title = stringResource(R.string.original_url),
+                summary = originalUrl,
+                onClick = {
+                    val urlToCopy = originalUrl ?: return@SuperArrowWrapper
+                    coroutineScope.launch {
+                        clipboard.setClipEntry(ClipData.newPlainText("original_url", urlToCopy).toClipEntry())
+                    }
+                    context.toast(R.string.copied)
+                }
+            )
+        }
+        SuperArrowWrapper(
+            title = stringResource(R.string.packet_url),
+            summary = finalDownloadUrl,
+            onClick = {
+                val urlToCopy = finalDownloadUrl ?: return@SuperArrowWrapper
+                coroutineScope.launch {
+                    clipboard.setClipEntry(ClipData.newPlainText("url", urlToCopy).toClipEntry())
+                }
+                context.toast(R.string.copied)
+            }
+        )
+        resolvedUrlInfo?.getFormattedExpiresTime()?.let { expiresTime ->
+            SuperArrowWrapper(
+                title = stringResource(R.string.release_time),
+                summary = expiresTime
+            )
+        }
+        if (resolvedUrlInfo?.needsResolution == true && resolvedUrlInfo?.error != null) {
+            SuperArrowWrapper(
+                title = stringResource(R.string.url_resolve_failed),
+                summary = resolvedUrlInfo?.error
+            )
+        }
+        componentPackets.md5?.let {
+            SuperArrowWrapper(
+                title = stringResource(R.string.packet_md5),
+                summary = componentPackets.md5,
+                onClick = {
+                    coroutineScope.launch {
+                        clipboard.setClipEntry(ClipData.newPlainText(it, it).toClipEntry())
+                    }
+                    context.toast(R.string.copied)
+                }
+            )
+        }
+        if (finalDownloadUrl != null) {
+            PartitionListView(
+                downloadUrl = finalDownloadUrl,
+                systemVersion = systemVersion
+            )
+        }
     }
 }

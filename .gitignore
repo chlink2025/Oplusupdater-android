@@ -132,3 +132,10 @@ release.properties
 
 # Vibe Coding Files
 .serena/
+.codex-cache/
+
+# Local-only working files
+.gradle-user/
+OPlus-Tracker-main/
+OTA_MIGRATION_PLAN.md
+OplusUpdater/updater-sources.jar
