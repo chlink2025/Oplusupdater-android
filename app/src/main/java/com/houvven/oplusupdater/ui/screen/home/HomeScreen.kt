@@ -129,7 +129,7 @@ fun HomeScreen() {
     }
 
     LaunchedEffect(otaRegion) {
-        carrier = Updater.getConfig(otaRegion.name).carrierID
+        carrier = Updater.getConfig(otaRegion.name, false).carrierID
     }
 
     LaunchedEffect(msgFlow) {

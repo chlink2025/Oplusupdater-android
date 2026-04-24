@@ -26,6 +26,11 @@
 - 验证 `OplusUpdater/`：
   - `go test ./...` 通过
   - `go vet ./...` 通过
-- 明确本轮未执行 Gradle 验证，仅审查 Go 核心与 Android 源码结构
+- 基线切换到 `go 1.26.2`，并升级核心依赖到当前可通过回归测试的版本
+- 重新执行 `go mod tidy` 与 `go test ./...`，确认 `go1.26.2` 下 Go 核心仍然稳定
+- 重新生成 `OplusUpdater/updater.aar` 与 `OplusUpdater/updater-sources.jar`
+- 修复 Android 侧对 `Updater.getConfig(region, gray)` 新签名的调用适配
+- 验证 Android `:app:assembleDebug` 通过，确认新的 Go 绑定可被 UI 层消费
+- 补充 `README.md`、`README_EN.md`、`SPEC.md` 与 `ARCHITECTURE.md` 的 `go1.26.2` / `gomobile` / Android 联调说明
 - 调整 README 定位为项目介绍，将审查结论收敛到架构文档
 - 在 `ARCHITECTURE.md` 中新增分阶段 To Do List，明确先修 OTA 查询正确性

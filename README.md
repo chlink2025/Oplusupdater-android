@@ -26,29 +26,38 @@
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [README_EN.md](README_EN.md)
 
+## Current Baseline
+
+- Go：`1.26.2`
+- Android 本地构建：`JDK 17`
+- Go 绑定产物：本地生成的 `OplusUpdater/updater.aar`
+
 ## Build Android App
 
-先生成 Go 绑定产物：
+先安装 `gomobile` 工具并生成 Go 绑定产物：
 
 ```powershell
 git clone https://github.com/chlink2025/Oplusupdater-android OplusUpdater-Android
 cd OplusUpdater-Android\OplusUpdater
-go get golang.org/x/mobile/bind
+go install golang.org/x/mobile/cmd/gomobile@latest
 gomobile init
-gomobile bind -target=android -androidapi 26 -v ./pkg/updater
+gomobile bind -target=android -androidapi 26 -v -o updater.aar ./pkg/updater
+```
+
+Windows 本地生成 `updater.aar` 时，如果 `javac` 报 `GBK` 不可映射字符错误，请显式设置：
+
+```powershell
+$env:JAVA_HOME='<JDK17_PATH>'
+$env:JAVA_TOOL_OPTIONS='-Dfile.encoding=UTF-8'
+$env:ANDROID_HOME='<ANDROID_SDK_PATH>'
+$env:ANDROID_NDK_HOME='<ANDROID_NDK_PATH>'
 ```
 
 再构建 Android：
 
 ```powershell
 cd ..
-.\gradlew.bat assemble
-```
-
-如果未安装 `gomobile`：
-
-```powershell
-go install golang.org/x/mobile/cmd/gomobile@latest
+.\gradlew.bat :app:assembleDebug
 ```
 
 ## Go Core
@@ -60,6 +69,14 @@ go install golang.org/x/mobile/cmd/gomobile@latest
 - 独立调试协议请求与加解密逻辑
 
 更多 Go 侧说明见 [OplusUpdater/README.md](OplusUpdater/README.md)。
+
+## Verified Status
+
+截至 `2026-04-24`，当前仓库已验证：
+
+- `OplusUpdater/` 下 `go test ./...` 通过
+- `gomobile bind` 可生成新的 `updater.aar`
+- Android `:app:assembleDebug` 通过，确认新绑定可被 UI 层消费
 
 ## Credits
 

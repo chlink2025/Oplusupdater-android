@@ -136,11 +136,18 @@ pkg/updater/*.go
 
 ### 4.2 当前版本与工具链
 
-- Go 模块声明：`go 1.24.0` / `toolchain go1.24.1`
+- Go 模块声明：`go 1.26.2`
 - CI Workflow：通过 `OplusUpdater/go.mod` 自动读取 Go 版本
 - Android 构建建议：JDK 17
 
 说明：Android 本地构建仍建议显式使用 JDK 17，不使用系统默认 Java 25。
+
+### 4.3 当前已验证的绑定构建前提
+
+- 使用 `golang.org/x/mobile/cmd/gomobile` 生成 Android 绑定
+- 生成前执行 `gomobile init`
+- Windows 本地生成时显式设置 `JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8`
+- 在线测试与绑定前清理代理环境变量，避免请求被错误转发
 
 ## 5. 当前架构优点
 
@@ -194,7 +201,7 @@ pkg/updater/*.go
 
 ### 第一阶段：收口 Go 核心与构建基线
 
-1. 重新生成 `updater.aar`，验证 Android 侧是否已受益于新查询协议
+1. 已完成：基于 `go 1.26.2` 重新生成 `updater.aar` / `updater-sources.jar`，并确认 Android 侧已吃到新查询协议
 2. 继续收敛 `OplusUpdater/README.md` 与实际协议暴露面
 3. 把 gomobile 产物生成流程整理成稳定脚本
 4. 为 `genshin` 与 `components` 补稳定的在线回归样本，再评估后续更多 tracker 差异能力是否需要继续进入 CLI
@@ -223,15 +230,17 @@ pkg/updater/*.go
 - 已执行 `OplusUpdater/` 下的 `go test ./...`
 - 已执行 `OplusUpdater/` 下的 `go vet ./...`
 - 已执行 `OplusUpdater/` 下的 `go test ./test -v`
-- 未执行 Gradle 验证
+- 已执行 `OplusUpdater/` 下的 `go mod tidy`
+- 已执行 `gomobile bind` 重新生成 Android AAR
+- 已执行 Android `:app:assembleDebug`
 
 ### 9.2 本轮审查结论
 
 - Go 核心主查询协议已建立“对齐参考实现 + 在线回归断言”的稳定基线
-- Android 工程不是开箱即构建，先依赖 `gomobile bind` 生成 AAR
+- Android 工程不是开箱即构建，先依赖 `gomobile bind` 生成 AAR；当前这条本地联调链路已跑通
 - 后续迭代优先级应为：
-1. 验证 Android 绑定产物是否已吃到新的 Go 查询修复
-2. 修正 Go 核心与仓库元信息不一致
+1. 整理 `gomobile` 产物生成流程与自动化脚本
+2. 为 `genshin` 与 `components` 补稳定在线回归样本
 3. 拆解 Android 侧状态与 IO 耦合
 4. 处理下载链路与现代存储兼容性
 
@@ -249,7 +258,7 @@ pkg/updater/*.go
 2. 已完成：补齐当前主链路所需的关键字段和 endpoint 切换逻辑。
 3. 已完成：修正 `QueryUpdate` 的 JSON 解析错误返回。
 4. 已完成：用典型机型和区域样本确认当前返回不再明显回退到旧包。
-5. 待完成：重新生成 `updater.aar` 并在 Android UI 侧复核同样的结果。
+5. 已完成：重新生成 `updater.aar` 并在 Android UI 侧完成最小联调复核。
 
 ### P1 回归测试
 
@@ -263,7 +272,7 @@ pkg/updater/*.go
 
 1. 已完成：统一 `go.mod` 模块路径与当前仓库地址。
 2. 已完成：修正 `OplusUpdater/README.md` 中过期的安装和 CLI 用法说明。
-3. 已完成：让 CI 通过 `go-version-file` 与 `go.mod` / `toolchain` 自动对齐。
+3. 已完成：让 CI 通过 `go-version-file` 与 `go.mod` 自动对齐。
 4. 已完成：把当前 `QueryUpdateArgs` 已支持的高级字段开放到 CLI，并补本地参数测试。
 5. 已完成：将 `QueryUpdate` 拆成单次查询与 `anti` 策略层，并补本地策略测试与在线回归样本。
 6. 已完成：补齐 tracker 风格的 CN `gray` host 选择，并增加 `--gray` 与在线回归样本。
@@ -273,7 +282,7 @@ pkg/updater/*.go
 
 ### P3 Android 绑定与客户端
 
-1. 确认 Go 修复后，Android 通过新的 `updater.aar` 获取正确查询结果。
+1. 已完成：确认 Go 修复后，Android 已通过新的 `updater.aar` 获取更新后的查询逻辑，并完成 `getConfig(region, gray)` 签名适配。
 2. 修正 `UpdateQueryResponseCard.kt` 中“复用第一个组件 URL 到全部组件”的问题。
 3. 修正 `HomeScreen.kt` 中 `MutableSharedFlow` 未 `remember` 的状态风险。
 4. 之后再考虑引入 `ViewModel`，不要在查询主链路未稳定前提前做大重构。
