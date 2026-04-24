@@ -182,7 +182,8 @@ pkg/updater/*.go
   - 已通过 `HomeViewModel` 拆走表单状态、对话框状态、查询执行、历史记录与消息流，但仍直接协调部分页面事件与组合细节。
 
 - `UpdateLogDialog.kt`
-  - 直接加载远程 HTML 到 `WebView`，缺少统一的加载错误处理与安全边界说明。
+  - 已补最小加载/失败/重试三态，并收敛 `WebView` 的文件与内容访问权限。
+  - 后续仍可继续把 HTML 拉取与错误映射下沉出 Composable，进一步压缩 UI 层 IO 细节。
 
 - `PartitionListView.kt`
   - 使用 `Environment.getExternalStoragePublicDirectory` 与 `getExternalStorageDirectory`，是旧版存储方案。
@@ -289,7 +290,8 @@ pkg/updater/*.go
 4. 已完成首轮：为 `HomeScreen` 引入最小 `HomeViewModel`，先拆出查询执行、历史记录、结果状态与消息流。
 5. 已完成第二轮：把 `otaVersion / model / carrier / region / mode / expandMoreParameters` 收敛进 `HomeViewModel`，统一查询参数来源。
 6. 已完成第三轮：把 `AboutInfoDialog` 开关迁入 `HomeViewModel`，进一步压缩 `HomeScreen` 本地状态。
-7. 待完成：继续把更多 UI 事件与数据加载边界从 `HomeScreen` 收敛到更清晰的状态模型中，再评估是否继续扩大 `ViewModel` 职责。
+7. 已完成第四轮：为 `UpdateLogDialog` 增加加载/失败/重试三态，避免空白弹窗，并为 `WebView` 增加保守的访问限制。
+8. 待完成：继续把更多 UI 事件与数据加载边界从 `HomeScreen` 收敛到更清晰的状态模型中，再评估是否继续扩大 `ViewModel` 职责。
 
 ### P4 下载与分区导出
 

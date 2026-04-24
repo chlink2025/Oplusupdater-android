@@ -2,6 +2,8 @@
 
 ## 1.1.0-dev - 2026-04-24
 
+- 为 `UpdateLogDialog` 补齐更新日志的加载/失败/重试三态，并收敛 `WebView` 的文件与内容访问权限
+- 补齐 `values-zh-rCN` 中的更新日志相关文案，并重新验证 Android `:app:assembleDebug`
 - 对齐 `OplusUpdater` OTA 主查询链路的基础协议行为
 - 为 Go 核心新增主查询构造单元测试，覆盖默认参数、请求头、请求体与 endpoint 选择
 - 为 `OplusUpdater/test` 增加在线 OTA 回归断言，锁定核心机型查询结果不回退到旧包

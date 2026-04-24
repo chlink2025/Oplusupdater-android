@@ -5,7 +5,7 @@ import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.annotation.Keep
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibility as ComposeAnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,7 +48,10 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
 import com.houvven.oplusupdater.R
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
@@ -67,24 +71,56 @@ fun UpdateLogDialog(
 ) {
     val isDarkTheme = isSystemInDarkTheme()
     var responseHtml by rememberSaveable { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+    var reloadTrigger by remember { mutableStateOf(0) }
 
-    LaunchedEffect(url) {
-        launch(Dispatchers.IO) {
-            Log.d("UpdateLogDialog", "startup get html")
-            val conn = URL(url).openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            val responseCode = conn.responseCode
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                responseHtml = conn.inputStream.bufferedReader().use { it.readText() }
+    LaunchedEffect(show, url, reloadTrigger) {
+        if (!show) {
+            return@LaunchedEffect
+        }
+
+        isLoading = true
+        loadError = null
+        responseHtml = ""
+
+        val result = withContext(Dispatchers.IO) {
+            runCatching {
+                Log.d("UpdateLogDialog", "startup get html")
+                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                }
+                try {
+                    val responseCode = conn.responseCode
+                    if (responseCode != HttpURLConnection.HTTP_OK) {
+                        error("HTTP $responseCode")
+                    }
+                    val html = conn.inputStream.bufferedReader().use { reader -> reader.readText() }
+                    if (html.isBlank()) {
+                        error("Empty response body")
+                    }
+                    html
+                } finally {
+                    conn.disconnect()
+                }
             }
         }
+
+        result.onSuccess { html ->
+            responseHtml = html
+        }.onFailure {
+            loadError = it.message ?: "Unknown error"
+        }
+        isLoading = false
     }
 
     Popup(
         onDismissRequest = onDismissRequest,
         properties = PopupProperties(excludeFromSystemGesture = false)
     ) {
-        AnimatedVisibility(
+        ComposeAnimatedVisibility(
             visible = show,
             enter = slideInVertically(
                 initialOffsetY = { fullHeight -> fullHeight },
@@ -143,20 +179,71 @@ fun UpdateLogDialog(
                         )
                     }
 
-                    AndroidView(
-                        factory = {
-                            WebView(it).apply {
-                                setBackgroundColor(Color.Transparent.toArgb())
-                                // @formatter:off
-                                addJavascriptInterface(object { @JavascriptInterface @Keep @Suppress("unused") fun isNight(): Boolean = isDarkTheme }, "HeytapTheme")
-                                // @formatter:on
-                                settings.javaScriptEnabled = true
-                            }
-                        },
-                        update = {
-                            it.loadDataWithBaseURL(url, responseHtml, "text/html", "utf-8", null)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 26.dp, vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (responseHtml.isNotBlank() && !isLoading && loadError == null) {
+                            AndroidView(
+                                factory = { context ->
+                                    WebView(context).apply {
+                                        setBackgroundColor(Color.Transparent.toArgb())
+                                        // @formatter:off
+                                        addJavascriptInterface(object { @JavascriptInterface @Keep @Suppress("unused") fun isNight(): Boolean = isDarkTheme }, "HeytapTheme")
+                                        // @formatter:on
+                                        settings.javaScriptEnabled = true
+                                        settings.javaScriptCanOpenWindowsAutomatically = false
+                                        settings.allowFileAccess = false
+                                        settings.allowContentAccess = false
+                                    }
+                                },
+                                update = {
+                                    it.loadDataWithBaseURL(url, responseHtml, "text/html", "utf-8", null)
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                            )
                         }
-                    )
+
+                        if (isLoading || loadError != null || responseHtml.isBlank()) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (isLoading) {
+                                    InfiniteProgressIndicator(
+                                        color = MiuixTheme.colorScheme.primary,
+                                        size = 24.dp
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.update_log_loading),
+                                        color = MiuixTheme.colorScheme.onSurface
+                                    )
+                                } else if (loadError != null) {
+                                    Text(
+                                        text = stringResource(R.string.update_log_load_failed),
+                                        color = MiuixTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = loadError.orEmpty(),
+                                        color = if (isDarkTheme) Color.Gray else Color.DarkGray,
+                                        fontSize = 12.sp
+                                    )
+                                    Button(
+                                        onClick = { reloadTrigger++ },
+                                        colors = ButtonDefaults.buttonColorsPrimary()
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.retry),
+                                            color = MiuixTheme.colorScheme.onPrimary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 IconButton(
