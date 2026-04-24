@@ -25,6 +25,7 @@ type QueryUpdateArgs struct {
 	Guid           string
 	Anti           bool
 	Gray           bool
+	GrayNew        bool
 	Pre            bool
 	CustomLanguage string
 	RomVersion     string
@@ -128,6 +129,10 @@ func resolveUpdatePath(args *QueryUpdateArgs) string {
 func QueryUpdate(args *QueryUpdateArgs) (*ResponseResult, error) {
 	if args == nil {
 		return nil, fmt.Errorf("query args cannot be nil")
+	}
+
+	if args.GrayNew && !isSimpleOTAVersion(args.OtaVersion) {
+		return queryUpdateGrayNew(args, queryUpdateOnce)
 	}
 
 	if args.Anti && !isSimpleOTAVersion(args.OtaVersion) {

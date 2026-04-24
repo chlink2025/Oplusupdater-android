@@ -29,6 +29,21 @@ func responseBodyVersionCode(t *testing.T, result *ResponseResult) int {
 	return body.VersionCode
 }
 
+func TestQueryResponseBodyEffectiveOTAVersion(t *testing.T) {
+	body := queryResponseBody{
+		OtaVersion:     "RMX5010_11.A.55_0550_202501010000",
+		RealOtaVersion: "RMX5010_11.A.56_0560_202502020000",
+	}
+	if got := body.effectiveOTAVersion(); got != "RMX5010_11.A.56_0560_202502020000" {
+		t.Fatalf("unexpected effective ota version: %s", got)
+	}
+
+	body.RealOtaVersion = ""
+	if got := body.effectiveOTAVersion(); got != "RMX5010_11.A.55_0550_202501010000" {
+		t.Fatalf("unexpected fallback ota version: %s", got)
+	}
+}
+
 func TestIsSimpleOTAVersion(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -232,5 +247,107 @@ func TestQueryUpdateAntiRetriesLastFakeVersion(t *testing.T) {
 	}
 	if got := responseBodyVersionCode(t, result); got != 150 {
 		t.Fatalf("unexpected version code: got %d want 150", got)
+	}
+}
+
+func TestQueryUpdateGrayNewRunsTasteThenGrayAndSelectsBestResult(t *testing.T) {
+	args := &QueryUpdateArgs{
+		OtaVersion: "RMX5010",
+		Region:     RegionCn,
+		GrayNew:    true,
+	}
+
+	type call struct {
+		otaVersion string
+		mode       string
+		gray       bool
+		pre        bool
+	}
+
+	var calls []call
+	runner := func(current *QueryUpdateArgs) (*ResponseResult, error) {
+		calls = append(calls, call{
+			otaVersion: current.OtaVersion,
+			mode:       current.Mode,
+			gray:       current.Gray,
+			pre:        current.Pre,
+		})
+
+		switch current.OtaVersion {
+		case "RMX5010_11.A.01_0001_197001010000":
+			if current.Mode != "taste" || current.Gray {
+				t.Fatalf("unexpected taste stage args: %+v", current)
+			}
+			return newTestResponseResult(t, 200, map[string]any{
+				"otaVersion": "RMX5010_11.A.55_0550_202501010000",
+			}), nil
+		case "RMX5010_11.A.55_0550_202501010000":
+			if !current.Gray || current.Pre {
+				t.Fatalf("unexpected final stage args: %+v", current)
+			}
+			return newTestResponseResult(t, 200, map[string]any{
+				"realOtaVersion": current.OtaVersion,
+				"versionCode":    550,
+			}), nil
+		case "RMX5010_11.C.01_0001_197001010000":
+			return newTestResponseResult(t, 200, map[string]any{
+				"otaVersion": "RMX5010_11.C.66_0660_202503030000",
+			}), nil
+		case "RMX5010_11.C.66_0660_202503030000":
+			if !current.Gray || current.Pre {
+				t.Fatalf("unexpected gray stage args: %+v", current)
+			}
+			return newTestResponseResult(t, 200, map[string]any{
+				"realOtaVersion": current.OtaVersion,
+				"versionCode":    660,
+			}), nil
+		default:
+			return newTestResponseResult(t, 2004, map[string]any{"paramFlag": 0}), nil
+		}
+	}
+
+	result, err := queryUpdateGrayNew(args, runner)
+	if err != nil {
+		t.Fatalf("queryUpdateGrayNew returned error: %v", err)
+	}
+	if got := responseBodyVersionCode(t, result); got != 660 {
+		t.Fatalf("unexpected version code: got %d want 660", got)
+	}
+	if len(calls) < 4 {
+		t.Fatalf("expected at least 4 calls, got %d", len(calls))
+	}
+}
+
+func TestQueryUpdateGrayNewSkipsTasteMisses(t *testing.T) {
+	args := &QueryUpdateArgs{
+		OtaVersion: "RMX5010",
+		Region:     RegionCn,
+		GrayNew:    true,
+	}
+
+	runner := func(current *QueryUpdateArgs) (*ResponseResult, error) {
+		switch current.OtaVersion {
+		case "RMX5010_11.A.01_0001_197001010000":
+			return newTestResponseResult(t, 2004, map[string]any{"paramFlag": 0}), nil
+		case "RMX5010_11.C.01_0001_197001010000":
+			return newTestResponseResult(t, 200, map[string]any{
+				"otaVersion": "RMX5010_11.C.66_0660_202503030000",
+			}), nil
+		case "RMX5010_11.C.66_0660_202503030000":
+			return newTestResponseResult(t, 200, map[string]any{
+				"realOtaVersion": current.OtaVersion,
+				"versionCode":    660,
+			}), nil
+		default:
+			return newTestResponseResult(t, 2004, map[string]any{"paramFlag": 0}), nil
+		}
+	}
+
+	result, err := queryUpdateGrayNew(args, runner)
+	if err != nil {
+		t.Fatalf("queryUpdateGrayNew returned error: %v", err)
+	}
+	if got := responseBodyVersionCode(t, result); got != 660 {
+		t.Fatalf("unexpected version code: got %d want 660", got)
 	}
 }

@@ -201,3 +201,11 @@ func TestQueryUpdate_PHP110_CN(t *testing.T) {
 		Region:     updater.RegionCn,
 	}, 2290)
 }
+
+func TestQueryUpdate_PHP110_CN_GrayNew(t *testing.T) {
+	assertStableUpdate(t, &updater.QueryUpdateArgs{
+		OtaVersion: "PHP110",
+		Region:     updater.RegionCn,
+		GrayNew:    true,
+	}, 3070)
+}

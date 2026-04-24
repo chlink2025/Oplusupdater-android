@@ -21,6 +21,13 @@ type queryResponseBody struct {
 	VersionCode    int    `json:"versionCode"`
 }
 
+func (body queryResponseBody) effectiveOTAVersion() string {
+	if otaVersion := strings.TrimSpace(body.RealOtaVersion); otaVersion != "" {
+		return otaVersion
+	}
+	return strings.TrimSpace(body.OtaVersion)
+}
+
 func cloneQueryUpdateArgs(args *QueryUpdateArgs) *QueryUpdateArgs {
 	if args == nil {
 		return nil
@@ -228,4 +235,97 @@ func queryUpdateAnti(args *QueryUpdateArgs, runner queryRunner) (*ResponseResult
 		return nil, lastErr
 	}
 	return nil, fmt.Errorf("anti query returned no result")
+}
+
+func queryUpdateGrayNew(args *QueryUpdateArgs, runner queryRunner) (*ResponseResult, error) {
+	if args == nil {
+		return nil, fmt.Errorf("query args cannot be nil")
+	}
+
+	basePrefix := strings.TrimSpace(args.OtaVersion)
+	customModel := strings.TrimSpace(args.Model)
+	normalizedRegion := normalizeRegion(args.Region)
+
+	var (
+		bestResult      *ResponseResult
+		bestVersionCode int
+		lastResult      *ResponseResult
+		lastErr         error
+	)
+
+	for _, suffix := range antiOTASuffixes {
+		candidatePrefix := basePrefix + suffix
+		tasteOTA, tasteModel := processOTAPrefix(candidatePrefix, normalizedRegion, args.Pre, customModel)
+
+		tasteArgs := cloneQueryUpdateArgs(args)
+		tasteArgs.OtaVersion = tasteOTA
+		tasteArgs.Region = normalizedRegion
+		tasteArgs.Model = tasteModel
+		tasteArgs.Mode = "taste"
+		tasteArgs.Gray = false
+		tasteArgs.Anti = false
+		tasteArgs.GrayNew = false
+
+		tasteResult, err := runner(tasteArgs)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		lastResult = tasteResult
+		if !isSuccessfulResponse(tasteResult) {
+			continue
+		}
+
+		tasteBody, err := parseQueryResponseBody(tasteResult)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		nextOTAVersion := tasteBody.effectiveOTAVersion()
+		if nextOTAVersion == "" {
+			continue
+		}
+
+		finalOTA, finalModel := processOTAPrefix(nextOTAVersion, normalizedRegion, false, customModel)
+
+		finalArgs := cloneQueryUpdateArgs(args)
+		finalArgs.OtaVersion = finalOTA
+		finalArgs.Region = normalizedRegion
+		finalArgs.Model = finalModel
+		finalArgs.Gray = true
+		finalArgs.Pre = false
+		finalArgs.Anti = false
+		finalArgs.GrayNew = false
+
+		finalResult, err := runner(finalArgs)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		lastResult = finalResult
+		if !isSuccessfulResponse(finalResult) {
+			continue
+		}
+
+		finalBody, err := parseQueryResponseBody(finalResult)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if bestResult == nil || finalBody.VersionCode >= bestVersionCode {
+			bestResult = finalResult
+			bestVersionCode = finalBody.VersionCode
+		}
+	}
+
+	if bestResult != nil {
+		return bestResult, nil
+	}
+	if lastResult != nil {
+		return lastResult, nil
+	}
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	return nil, fmt.Errorf("graynew query returned no result")
 }

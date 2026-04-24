@@ -26,6 +26,7 @@ Flags:
       --coloros-version string           Override colorOSVersion header, e.g., --coloros-version=ColorOS15.0
       --company-id string                Override companyId header
       --gray                             Use the CN gray OTA host when region is CN
+      --graynew                          Run the tracker-style taste-to-gray prefix strategy before selecting the best result
       --guid string                      Preview GUID, must be a 64-character hexadecimal string
   -h, --help                             help for updater
       --imei string                      IMEI, e.g., --imei=86429XXXXXXXX98
@@ -45,6 +46,7 @@ Examples:
 ```shell
 updater RMX5010_11.A --region CN
 updater RMX5010_11.A --region CN --gray
+updater PHP110 --region CN --graynew
 updater CPH2653_11.A --region EU --model CPH2653EEA
 updater RMX3301 --region IN --anti
 updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011
@@ -55,7 +57,9 @@ When `--anti` is enabled and the input is only a device prefix such as `RMX3301`
 
 When `--gray` is enabled with `--region CN`, the query uses the tracker-aligned CN gray host `component-ota-gray.coloros.com` while keeping the normal CN public key and defaults.
 
-The current CLI now covers the existing public Go query fields except for future protocol extensions that are not yet in `QueryUpdateArgs`, such as `components`, `graynew`, and `genshin`.
+When `--graynew` is enabled with a device prefix such as `PHP110`, the CLI first probes the prefix in `taste` mode, then re-queries the returned OTA on the CN gray host and returns the best successful final package.
+
+The current CLI now covers the existing public Go query fields except for future protocol extensions that are not yet in `QueryUpdateArgs`, such as `components` and `genshin`.
 
 ## Current request headers
 

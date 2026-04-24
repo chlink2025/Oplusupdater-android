@@ -75,6 +75,10 @@ func queryArgsFromCommand(cmd *cobra.Command, otaVersion string) (*updater.Query
 	if err != nil {
 		return nil, err
 	}
+	grayNew, err := getBool("graynew")
+	if err != nil {
+		return nil, err
+	}
 	customLanguage, err := getString("language")
 	if err != nil {
 		return nil, err
@@ -120,6 +124,7 @@ func queryArgsFromCommand(cmd *cobra.Command, otaVersion string) (*updater.Query
 		Guid:           guid,
 		Anti:           anti,
 		Gray:           gray,
+		GrayNew:        grayNew,
 		Pre:            pre,
 		CustomLanguage: customLanguage,
 		RomVersion:     romVersion,
@@ -137,6 +142,7 @@ func newRootCmd() *cobra.Command {
 		Short: " Use Oplus official api to query OPlus,OPPO and Realme Mobile 's OS version update.",
 		Example: "  updater RMX5010_11.A --region CN\n" +
 			"  updater RMX5010_11.A --region CN --gray\n" +
+			"  updater PHP110 --region CN --graynew\n" +
 			"  updater CPH2653_11.A --region EU --model CPH2653EEA\n" +
 			"  updater RMX3301 --region IN --anti\n" +
 			"  updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011\n" +
@@ -167,6 +173,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.Flags().String("guid", "", "Preview GUID, must be a 64-character hexadecimal string")
 	rootCmd.Flags().Bool("anti", false, "Expand a device prefix through the anti taste strategy before selecting the best result")
 	rootCmd.Flags().Bool("gray", false, "Use the CN gray OTA host when region is CN")
+	rootCmd.Flags().Bool("graynew", false, "Run the tracker-style taste-to-gray prefix strategy before selecting the best result")
 	rootCmd.Flags().Bool("pre", false, "Use preview query path, typically with --guid")
 	rootCmd.Flags().String("language", "", "Override request language tag, e.g., --language=en-IN")
 	rootCmd.Flags().String("rom-version", "", "Override romVersion header, e.g., --rom-version=RMX3301_15.0.0.1410(EX01)")

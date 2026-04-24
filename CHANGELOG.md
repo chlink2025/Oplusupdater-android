@@ -10,6 +10,8 @@
 - 为 `updater` CLI 增加 `--anti`，并补充本地参数测试与 `RMX3301_IN` 在线回归样本
 - 为 Go 核心新增 tracker 风格的 CN `gray` host 切换，并为 CLI 增加 `--gray`
 - 为 `RMX5010_CN` 增加 `gray` 在线回归样本，锁定 CN 灰度主机查询不回退
+- 为 Go 核心新增 tracker 风格的 `graynew` taste-to-gray 双阶段策略，并为 CLI 增加 `--graynew`
+- 为 `PHP110_CN` 增加 `graynew` 在线回归样本，锁定前缀 graynew 查询结果
 - 统一 `OplusUpdater` Go 模块路径、仓库内导入路径与 CI Go 版本来源
 - 修正 `OplusUpdater/README.md` 的安装说明、CLI 用法与当前协议字段描述
 - 为 `updater` CLI 补充 `guid/pre/language/rom-version/android-version/coloros-version/pipeline-key/operator/company-id` 等高级参数
