@@ -7,80 +7,101 @@ Use Oplus official api to query OPlus,OPPO and Realme Mobile 's OS version updat
 ```shell
 go install github.com/chlink2025/Oplusupdater-android/OplusUpdater/cmd/updater@latest
 ```
-For android u can use [chlink2025/Oplusupdater-android](https://github.com/chlink2025/Oplusupdater-android)
+
+For Android, use the full project repository: [chlink2025/Oplusupdater-android](https://github.com/chlink2025/Oplusupdater-android)
 
 ## How to use?
+
 ```shell
-$ updater -h                                              
+$ updater -h
 Use Oplus official api to query OPlus,OPPO and Realme Mobile 's OS version update.
 
 Usage:
-  updater [flags]
+  updater [otaVersion] [flags]
 
 Flags:
       --carrier my_manifest/build.prop   Found in my_manifest/build.prop file, under the `NV_ID` reference, e.g., --carrier=01000100
-  -h, --help                             help for oplus-updater
+  -h, --help                             help for updater
       --imei string                      IMEI, e.g., --imei=86429XXXXXXXX98
-      --mode string                      Mode: manual (stable, default) or taste (testing), e.g., --mode=manual
+      --mode string                      Mode: manual (stable, default) or taste (public testing), e.g., --mode=manual (default "manual")
       --model string                     Device model, e.g., --model=RMX3820
-  -o, --ota-version string               OTA version (required), e.g., --ota-version=RMX3820_11.A.00_0000_000000000000
   -p, --proxy string                     Proxy server, e.g., --proxy=type://@host:port or --proxy=type://user:password@host:port, support http and socks proxy
       --region string                    Server zone: CN (default), EU, IN, SG, RU, TR, TH, GL (Global), ID, TW, MY, VN, e.g., --region=CN (default "CN")
 ```
 
-## Update request headers
+Examples:
+
+```shell
+updater RMX5010_11.A --region CN
+updater CPH2653_11.A --region EU --model CPH2653EEA
+updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011
+```
+
+Current CLI exposes only the common query fields above. Advanced protocol fields such as `Guid`, `Pre`, `CustomLanguage`, `RomVersion`, `AndroidVersion`, `ColorOSVersion`, `PipelineKey`, `Operator`, and `CompanyID` are available through the Go API, not through CLI flags yet.
+
+## Current request headers
 
 | header         | getter                                              | example                           | Required |
 |----------------|-----------------------------------------------------|-----------------------------------|----------|
 | language       | `Local.getDefault().getLanguageTag()`               | zh-CN                             | ✅        |
 | newLanguage    | `Local.getDefault().getLanguageTag()`               | zh-CN                             | ⭕        |
-| romVersion     | _ro.build.display.id_                               | RMX3350_13.1.0.400(CN01)          | ⭕        |
-| androidVersion | `"Android" + Build.VERSION.RELEASE`                 | Android 13                        | ✅        |
-| colorOSVersion | "ColorOS" + _ro.build.version.oplusrom_             | ColorOS13.1.0                     | ✅        |
+| androidVersion | API field, defaults to `unknown` when omitted       | Android 15                        | ⭕        |
+| colorOSVersion | API field, defaults to `unknown` when omitted       | ColorOS15.0                       | ⭕        |
+| romVersion     | API field, defaults to `unknown` when omitted       | RMX3301_15.0.0.1410(EX01)         | ⭕        |
 | infVersion     | magic value: 1                                      | 1                                 | ⭕        |
 | otaVersion     | _ro.build.version.ota_                              | RMX3350_11.F.25_3250_202403011232 | ✅        |
-| model          | `Build.MODEL `                                      | rmx3350                           | ✅        |
-| mode           | `client_auto` or `server_auto` or `manual` or `???` | manual                            | ⭕        |
+| model          | `Build.MODEL` or explicit query arg                 | RMX3301                           | ✅        |
+| mode           | `manual` / `taste` / other OTA modes                | manual                            | ⭕        |
 | nvCarrier      | _ro.build.oplus_nv_id_                              |                                   | ✅        |
-| pipelineKey    | _ro.oplus.pipeline_key_                             |                                   | ⭕        |
-| companyId      | _ro.oplus.company_id_                               | ~~is empty?~~                     | ⭕        |
-| prjNum         | _ro.separate.soft_                                  |                                   | ⭕        |
-| brand          | `Build.BRAND`                                       | realme                            | ⭕        |
-| brandSota      | _ro.product.brand_                                  | realme                            | ⭕        |
-| osType         | _ro.oplus.image.my_stock.type_                      | domestic_realme                   | ⭕        |
-|                |                                                     |                                   |          |
-| deviceId       | OPPO Framework provide GUID and SHA                 |                                   | ✅        |
-| protectedKey   |                                                     |                                   | ✅        |
+| pipelineKey    | API field, defaults to `ALLNET`                     | ALLNET                            | ⭕        |
+| operator       | API field, defaults to `pipelineKey`                | ALLNET                            | ⭕        |
+| companyId      | API field, defaults to empty                        |                                   | ⭕        |
+| version        | fixed protocol version                              | 2                                 | ✅        |
+| deviceId       | random 64-char header value, or IMEI-derived SHA256 | 6P2R...                           | ✅        |
+| protectedKey   | RSA-encrypted AES key config                        | `{...}`                           | ✅        |
 
 ### Simple
 
 ```http
+# Request path
+https://<host>/update/v3
+# If `Pre == true` or `Guid != 0*64`, use `/update/v6`
+
 # Headers
 language: zh-CN
 newLanguage: zh-CN
-romVersion: RMX3350_13.1.0.400(CN01)
-androidVersion: Android13
-colorOSVersion: ColorOS13.1.0
+androidVersion: unknown
+colorOSVersion: unknown
+romVersion: unknown
 infVersion: 1
 otaVersion: RMX3350_11.F.00_0000_000000000000
 model: RMX3350
 mode: manual
 nvCarrier: 10010111
 pipelineKey: ALLNET
+operator: ALLNET
 companyId: 
-prjNum: 21609
-brand: realme
-brandSota: realme
-osType: domestic_realme
 version: 2
 deviceId: 628A6A292C3274921C497UW27DH201ODU17484CA5630345B24D20DAE1C792B90
 protectedKey: {"SCENE_1":{"protectedKey":"VU0P4dUKr9gPQdiDdLI1QpV2e2K39D\/rGge4BCfQ5ZgreUJr\/QyvUx5wZrZKBff3NvMfeU9f3TIiPBxESELLW+\/GdSjuuHYr2yg??????????\/xyAH8K74HKj+OWSh8eRhi\/U3pti8T1sqPVLAXlvnrh\/3QBzaYCXuaXn823TNE+5Scnl0VaXjWwf2siNsKKAZUpeef3xCwn\/u8ILhYfTOCzOVNX+ZVXF8OW+RbhFZX9cff4y6RG943gHZyYI+H67UWnY2TjW8VP1\/FPHdx4bFLMRphE6psXYXY\/HAWLRqTZVilT\/BHWYM7HpD26lTmbb4oyfzcEy+vVo+YsGQXCZg==","version":"1717246406204","negotiationVersion":"1615879139745"}}
 Content-Type: application/json; charset=utf-8
-Content-Length: 1928
 Host: component-ota-cn.allawntech.com
-Connection: Keep-Alive
-Accept-Encoding: gzip
-User-Agent: okhttp/3.12.2
+```
+
+The request body uses a separate `deviceId` field:
+
+```json
+{
+  "mode": "0",
+  "time": 1716827580598,
+  "isRooted": "0",
+  "isLocked": true,
+  "type": "0",
+  "deviceId": "0000000000000000000000000000000000000000000000000000000000000000",
+  "opex": {
+    "check": true
+  }
+}
 ```
 
 ### protectedKey

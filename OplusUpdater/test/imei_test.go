@@ -2,8 +2,9 @@ package test
 
 import (
 	"fmt"
-	"github.com/Houvven/OplusUpdater/pkg/updater"
 	"testing"
+
+	"github.com/chlink2025/Oplusupdater-android/OplusUpdater/pkg/updater"
 )
 
 func TestCalculateIMEICheckDigit(t *testing.T) {

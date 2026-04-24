@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Houvven/OplusUpdater/pkg/updater"
+	"github.com/chlink2025/Oplusupdater-android/OplusUpdater/pkg/updater"
 )
 
 type otaQueryBody struct {

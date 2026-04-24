@@ -137,10 +137,10 @@ pkg/updater/*.go
 ### 4.2 当前版本与工具链
 
 - Go 模块声明：`go 1.24.0` / `toolchain go1.24.1`
-- CI Workflow：仍写死 `go-version: '1.22'`
+- CI Workflow：通过 `OplusUpdater/go.mod` 自动读取 Go 版本
 - Android 构建建议：JDK 17
 
-说明：当前 CI 与 Go 模块版本存在显式偏差，后续更新时应先统一。
+说明：Android 本地构建仍建议显式使用 JDK 17，不使用系统默认 Java 25。
 
 ## 5. 当前架构优点
 
@@ -164,13 +164,9 @@ pkg/updater/*.go
   - 还没有自定义 `nvid` 入口
   - 还没有 `anti / gray / graynew / genshin` 等策略型逻辑
 
-- 模块路径与仓库路径不一致
-  - `go.mod` 仍声明为 `github.com/Houvven/OplusUpdater`
-  - 这会影响当前 fork 的发布、安装说明和下游引用一致性。
-
-- CI 版本不一致
-  - `go.mod` 要求 1.24.x
-  - Workflow 仍使用 1.22
+- Go CLI 与 Go API 暴露面不一致
+  - `QueryUpdateArgs` 已支持更多协议字段
+  - CLI 目前仍只暴露公共常用参数，没有把高级字段开放成 flags
 
 ### 6.2 Android UI
 
@@ -203,9 +199,9 @@ pkg/updater/*.go
 ### 第一阶段：收口 Go 核心与构建基线
 
 1. 重新生成 `updater.aar`，验证 Android 侧是否已受益于新查询协议
-2. 对齐 `go.mod`、仓库路径与 README 安装说明
-3. 统一 CI 的 Go 版本
-4. 把 gomobile 产物生成流程整理成稳定脚本
+2. 继续收敛 `OplusUpdater/README.md` 与实际协议暴露面
+3. 把 gomobile 产物生成流程整理成稳定脚本
+4. 评估是否需要把部分高级查询字段暴露到 CLI，而不是只停留在 Go API
 
 ### 第二阶段：拆 Android 的状态边界
 
@@ -269,10 +265,11 @@ pkg/updater/*.go
 
 ### P2 Go 核心整理
 
-1. 统一 `go.mod` 模块路径与当前仓库地址。
-2. 修正 `OplusUpdater/README.md` 中过期的 CLI 用法说明。
-3. 对齐 CI 中的 Go 版本与 `go.mod` / `toolchain`。
-4. 把“构造请求”拆成更小的职责块，避免 `QueryUpdate` 继续膨胀。
+1. 已完成：统一 `go.mod` 模块路径与当前仓库地址。
+2. 已完成：修正 `OplusUpdater/README.md` 中过期的安装和 CLI 用法说明。
+3. 已完成：让 CI 通过 `go-version-file` 与 `go.mod` / `toolchain` 自动对齐。
+4. 待完成：评估是否把部分高级查询字段开放到 CLI。
+5. 待完成：继续把“构造请求”拆成更小的职责块，避免 `QueryUpdate` 继续膨胀。
 
 ### P3 Android 绑定与客户端
 

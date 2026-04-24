@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/Houvven/OplusUpdater/pkg/updater"
-	"github.com/spf13/cobra"
 	"log"
+
+	"github.com/chlink2025/Oplusupdater-android/OplusUpdater/pkg/updater"
+	"github.com/spf13/cobra"
 )
 
 func getStringFlag(cmd *cobra.Command, flagName string) string {
@@ -23,9 +24,12 @@ func getIntFlag(cmd *cobra.Command, flagName string) int {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "updater",
+	Use:   "updater <otaVersion>",
 	Short: " Use Oplus official api to query OPlus,OPPO and Realme Mobile 's OS version update.",
-	Args:  cobra.ExactArgs(1),
+	Example: "  updater RMX5010_11.A --region CN\n" +
+		"  updater CPH2653_11.A --region EU --model CPH2653EEA\n" +
+		"  updater RMX3301_11.H --region SG --model RMX3301 --carrier 00011011",
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		//Get the value of the flag
 		otaVer := args[0]
