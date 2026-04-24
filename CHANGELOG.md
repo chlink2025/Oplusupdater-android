@@ -33,6 +33,8 @@
 - 验证 Android `:app:assembleDebug` 通过，确认新的 Go 绑定可被 UI 层消费
 - 修复 `UpdateQueryResponseCard.kt` 中“所有组件复用第一个组件下载 URL”的问题，并让 `PartitionListView` 按组件使用各自的最终下载地址
 - 修复 `HomeScreen.kt` 中未 `remember` 的 `MutableSharedFlow`，避免重组后消息流实例漂移
+- 为 `HomeScreen` 引入最小 `HomeViewModel`，将查询执行、历史记录、结果状态与消息流从 Compose UI 中抽离
+- 为 Android app 补充 `lifecycle-viewmodel-compose` 依赖，支撑后续继续拆分 `HomeScreen` 状态职责
 - 新增 `OplusUpdater/tools.go`，用工具依赖固定 `golang.org/x/mobile/bind`，避免 `go mod tidy` 后 `gomobile bind` 失效
 - 补充 `README.md`、`README_EN.md`、`SPEC.md` 与 `ARCHITECTURE.md` 的 `go1.26.2` / `gomobile` / Android 联调说明
 - 调整 README 定位为项目介绍，将审查结论收敛到架构文档

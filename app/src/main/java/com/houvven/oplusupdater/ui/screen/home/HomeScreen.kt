@@ -20,10 +20,10 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,14 +36,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.houvven.oplusupdater.R
 import com.houvven.oplusupdater.ui.screen.home.components.AboutInfoDialog
 import com.houvven.oplusupdater.ui.screen.home.components.UpdateQueryResponseCard
 import com.houvven.oplusupdater.utils.toast
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -55,7 +53,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.extra.SuperDropdown
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import updater.ResponseResult
 import updater.Updater
 
 @Keep
@@ -90,28 +87,18 @@ val systemOtaVersion: String by lazy {
 
 @Composable
 fun HomeScreen() {
+    val homeViewModel: HomeViewModel = viewModel()
+    val uiState by homeViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val coroutineScope = rememberCoroutineScope { Dispatchers.IO }
     val scrollState = rememberScrollState()
     var showAboutInfoDialog by remember { mutableStateOf(false) }
     var updateMode by rememberSaveable { mutableStateOf(UpdateMode.STABLE) }
-    var isQuerying by rememberSaveable { mutableStateOf(false) }
     var expandMoreParameters by rememberSaveable { mutableStateOf(true) }
     var otaVersion by rememberSaveable { mutableStateOf(systemOtaVersion) }
     var model by rememberSaveable { mutableStateOf("") }
     var carrier by rememberSaveable { mutableStateOf("") }
     var otaRegion by rememberSaveable { mutableStateOf(OtaRegion.CN) }
-    var responseResult by remember { mutableStateOf<ResponseResult?>(null) }
-    val msgFlow = remember { MutableSharedFlow<String>(extraBufferCapacity = 1) }
-    
-    // History state
-    var historyList by remember { mutableStateOf(emptyList<com.houvven.oplusupdater.utils.HistoryUtils.HistoryItem>()) }
-    
-    // Load history on start
-    LaunchedEffect(Unit) {
-        historyList = com.houvven.oplusupdater.utils.HistoryUtils.getHistory(context)
-    }
 
     LaunchedEffect(otaVersion, otaRegion) {
         otaVersion.split("_").firstOrNull()?.let {
@@ -131,19 +118,9 @@ fun HomeScreen() {
         carrier = Updater.getConfig(otaRegion.name, false).carrierID
     }
 
-    LaunchedEffect(msgFlow) {
-        msgFlow.collectLatest {
+    LaunchedEffect(homeViewModel) {
+        homeViewModel.messages.collectLatest {
             context.toast(it)
-        }
-    }
-
-    LaunchedEffect(responseResult) {
-        responseResult?.run {
-            when (responseCode.toInt()) {
-                200 -> msgFlow.emit(context.getString(R.string.msg_query_success))
-                304 -> msgFlow.emit(context.getString(R.string.msg_no_update_available))
-                else -> msgFlow.emit("code: $responseCode, $errMsg")
-            }
         }
     }
 
@@ -253,7 +230,7 @@ fun HomeScreen() {
             
             // Search History View - placed before query button
             com.houvven.oplusupdater.ui.screen.home.components.SearchHistoryView(
-                historyList = historyList,
+                historyList = uiState.historyList,
                 onHistorySelect = { item ->
                     otaVersion = item.otaVersion
                     model = item.model
@@ -265,8 +242,7 @@ fun HomeScreen() {
                     }
                 },
                 onClearHistory = {
-                    com.houvven.oplusupdater.utils.HistoryUtils.clearHistory(context)
-                    historyList = emptyList()
+                    homeViewModel.clearHistory()
                 }
             )
 
@@ -280,24 +256,10 @@ fun HomeScreen() {
                         it.nvCarrier = carrier
                         it.mode = updateMode.value
                     }
-                    // Save to history
-                    com.houvven.oplusupdater.utils.HistoryUtils.saveHistory(
-                        context,
+                    homeViewModel.queryUpdate(
+                        args = args,
                         com.houvven.oplusupdater.utils.HistoryUtils.HistoryItem(otaVersion, otaRegion.name, model, carrier)
                     )
-                    historyList = com.houvven.oplusupdater.utils.HistoryUtils.getHistory(context)
-                    
-                    coroutineScope.launch(Dispatchers.IO) {
-                        isQuerying = true
-                        try {
-                            responseResult = null
-                            responseResult = Updater.queryUpdate(args)
-                        } catch (e: Exception) {
-                            msgFlow.emit(e.message ?: e.stackTraceToString())
-                        } finally {
-                            isQuerying = false
-                        }
-                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -305,7 +267,7 @@ fun HomeScreen() {
                 enabled = otaVersion.isNotBlank(),
                 colors = ButtonDefaults.buttonColorsPrimary(),
             ) {
-                if (isQuerying) {
+                if (uiState.isQuerying) {
                     InfiniteProgressIndicator(
                         color = MiuixTheme.colorScheme.onPrimary,
                         size = 20.dp
@@ -321,8 +283,8 @@ fun HomeScreen() {
                 }
             }
 
-            AnimatedVisibility(visible = responseResult != null) {
-                responseResult?.let { UpdateQueryResponseCard(it) }
+            AnimatedVisibility(visible = uiState.responseResult != null) {
+                uiState.responseResult?.let { UpdateQueryResponseCard(it) }
             }
 
             if (showAboutInfoDialog) {

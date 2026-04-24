@@ -48,7 +48,11 @@
 
 - `ui/screen/home/HomeScreen.kt`
   - Android 入口页面
-  - 表单状态、查询触发、历史记录、消息提示
+  - 表单输入与页面级交互状态
+
+- `ui/screen/home/HomeViewModel.kt`
+  - 查询执行入口
+  - 查询结果状态、历史记录状态与消息流
 
 - `domain/UpdateQueryResponse.kt`
   - OTA 返回体序列化模型
@@ -175,7 +179,7 @@ pkg/updater/*.go
 ### 6.2 Android UI
 
 - `HomeScreen.kt`
-  - 页面同时承担输入、请求、消息、历史、结果渲染触发，状态职责偏重。
+  - 已开始通过 `HomeViewModel` 拆走查询执行、历史记录与消息流，但表单输入态仍保留在 UI 层，状态职责仍偏重。
 
 - `UpdateLogDialog.kt`
   - 直接加载远程 HTML 到 `WebView`，缺少统一的加载错误处理与安全边界说明。
@@ -282,7 +286,8 @@ pkg/updater/*.go
 1. 已完成：确认 Go 修复后，Android 已通过新的 `updater.aar` 获取更新后的查询逻辑，并完成 `getConfig(region, gray)` 签名适配。
 2. 已完成：修正 `UpdateQueryResponseCard.kt` 中“复用第一个组件 URL 到全部组件”的问题，并让分区解析入口按组件使用各自的最终下载地址。
 3. 已完成：修正 `HomeScreen.kt` 中 `MutableSharedFlow` 未 `remember` 的状态风险，避免重组后消息流实例漂移。
-4. 之后再考虑引入 `ViewModel`，不要在查询主链路未稳定前提前做大重构。
+4. 已完成首轮：为 `HomeScreen` 引入最小 `HomeViewModel`，先拆出查询执行、历史记录、结果状态与消息流。
+5. 待完成：继续把表单输入态、更多 UI 事件与数据加载边界从 `HomeScreen` 收敛到更清晰的状态模型中，再评估是否继续扩大 `ViewModel` 职责。
 
 ### P4 下载与分区导出
 
