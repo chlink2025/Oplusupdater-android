@@ -1,7 +1,6 @@
 package com.houvven.oplusupdater.ui.screen.home.components
 
 import android.annotation.SuppressLint
-import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.annotation.Keep
@@ -26,12 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,8 +40,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
 import com.houvven.oplusupdater.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -57,8 +48,6 @@ import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.BackHandler
-import java.net.HttpURLConnection
-import java.net.URL
 
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -67,54 +56,11 @@ fun UpdateLogDialog(
     show: Boolean,
     url: String,
     softwareVersion: String,
+    uiState: UpdateLogUiState,
+    onRetryRequest: () -> Unit,
     onDismissRequest: () -> Unit
 ) {
     val isDarkTheme = isSystemInDarkTheme()
-    var responseHtml by rememberSaveable { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var loadError by remember { mutableStateOf<String?>(null) }
-    var reloadTrigger by remember { mutableStateOf(0) }
-
-    LaunchedEffect(show, url, reloadTrigger) {
-        if (!show) {
-            return@LaunchedEffect
-        }
-
-        isLoading = true
-        loadError = null
-        responseHtml = ""
-
-        val result = withContext(Dispatchers.IO) {
-            runCatching {
-                Log.d("UpdateLogDialog", "startup get html")
-                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    connectTimeout = 10000
-                    readTimeout = 10000
-                }
-                try {
-                    val responseCode = conn.responseCode
-                    if (responseCode != HttpURLConnection.HTTP_OK) {
-                        error("HTTP $responseCode")
-                    }
-                    val html = conn.inputStream.bufferedReader().use { reader -> reader.readText() }
-                    if (html.isBlank()) {
-                        error("Empty response body")
-                    }
-                    html
-                } finally {
-                    conn.disconnect()
-                }
-            }
-        }
-
-        result.onSuccess { html ->
-            responseHtml = html
-        }.onFailure {
-            loadError = it.message ?: "Unknown error"
-        }
-        isLoading = false
-    }
 
     Popup(
         onDismissRequest = onDismissRequest,
@@ -186,7 +132,7 @@ fun UpdateLogDialog(
                             .padding(horizontal = 26.dp, vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (responseHtml.isNotBlank() && !isLoading && loadError == null) {
+                        if (uiState.responseHtml.isNotBlank() && !uiState.isLoading && uiState.loadError == null) {
                             AndroidView(
                                 factory = { context ->
                                     WebView(context).apply {
@@ -201,18 +147,18 @@ fun UpdateLogDialog(
                                     }
                                 },
                                 update = {
-                                    it.loadDataWithBaseURL(url, responseHtml, "text/html", "utf-8", null)
+                                    it.loadDataWithBaseURL(url, uiState.responseHtml, "text/html", "utf-8", null)
                                 },
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }
 
-                        if (isLoading || loadError != null || responseHtml.isBlank()) {
+                        if (uiState.isLoading || uiState.loadError != null || uiState.responseHtml.isBlank()) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                if (isLoading) {
+                                if (uiState.isLoading) {
                                     InfiniteProgressIndicator(
                                         color = MiuixTheme.colorScheme.primary,
                                         size = 24.dp
@@ -221,18 +167,18 @@ fun UpdateLogDialog(
                                         text = stringResource(R.string.update_log_loading),
                                         color = MiuixTheme.colorScheme.onSurface
                                     )
-                                } else if (loadError != null) {
+                                } else if (uiState.loadError != null) {
                                     Text(
                                         text = stringResource(R.string.update_log_load_failed),
                                         color = MiuixTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = loadError.orEmpty(),
+                                        text = uiState.loadError.orEmpty(),
                                         color = if (isDarkTheme) Color.Gray else Color.DarkGray,
                                         fontSize = 12.sp
                                     )
                                     Button(
-                                        onClick = { reloadTrigger++ },
+                                        onClick = onRetryRequest,
                                         colors = ButtonDefaults.buttonColorsPrimary()
                                     ) {
                                         Text(

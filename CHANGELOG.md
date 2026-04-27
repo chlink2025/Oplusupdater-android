@@ -1,7 +1,9 @@
 # Changelog
 
-## 1.1.0-dev - 2026-04-24
+## 1.1.0-dev
 
+- 新增 `UpdateLogViewModel`，将更新日志 HTML 的加载、缓存、错误与重试状态从 `UpdateLogDialog` 下沉出 Composable
+- 调整 `UpdateQueryResponseCard` 与 `UpdateLogDialog` 的交互边界，改为 UI 只分发事件、状态层负责日志加载
 - 为 `UpdateLogDialog` 补齐更新日志的加载/失败/重试三态，并收敛 `WebView` 的文件与内容访问权限
 - 补齐 `values-zh-rCN` 中的更新日志相关文案，并重新验证 Android `:app:assembleDebug`
 - 对齐 `OplusUpdater` OTA 主查询链路的基础协议行为

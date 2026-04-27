@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.houvven.oplusupdater.R
 import com.houvven.oplusupdater.domain.UpdateQueryResponse
 import com.houvven.oplusupdater.utils.DownloadUrlResolver
@@ -109,11 +111,18 @@ private fun UpdateQueryResponseCardContent(
     response: UpdateQueryResponse,
 ) = with(response) {
     val firstComponentUrl = components?.firstOrNull()?.componentPackets?.url
+    val updateLogUrl = description?.panelUrl
+    val updateLogViewModel: UpdateLogViewModel = viewModel()
+    val updateLogUiState by updateLogViewModel.uiState.collectAsState()
 
-    var showUpdateLogDialog by remember { mutableStateOf(false) }
+    var showUpdateLogDialog by remember(updateLogUrl) { mutableStateOf(false) }
 
     var buildTime by remember { mutableStateOf<String?>(null) }
     var metadataSecurityPatch by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(updateLogUrl) {
+        updateLogViewModel.reset()
+    }
 
     LaunchedEffect(firstComponentUrl) {
         buildTime = null
@@ -190,8 +199,9 @@ private fun UpdateQueryResponseCardContent(
             )
             SuperArrowWrapper(
                 title = stringResource(R.string.update_log),
-                summary = description?.panelUrl,
+                summary = updateLogUrl,
                 onClick = {
+                    updateLogUrl?.let(updateLogViewModel::load)
                     showUpdateLogDialog = true
                 }
             )
@@ -207,11 +217,13 @@ private fun UpdateQueryResponseCardContent(
         }
     }
 
-    description?.panelUrl?.let {
+    updateLogUrl?.let {
         UpdateLogDialog(
             show = showUpdateLogDialog,
             url = it,
             softwareVersion = versionName ?: stringResource(R.string.unknown_version),
+            uiState = updateLogUiState,
+            onRetryRequest = updateLogViewModel::retry,
             onDismissRequest = { showUpdateLogDialog = false }
         )
     }
