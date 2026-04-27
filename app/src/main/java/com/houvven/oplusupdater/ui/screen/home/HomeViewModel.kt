@@ -22,6 +22,7 @@ data class HomeFormState(
     val carrier: String = "",
     val otaRegion: OtaRegion = OtaRegion.CN,
     val updateMode: UpdateMode = UpdateMode.STABLE,
+    val queryStrategy: QueryStrategy = QueryStrategy.NORMAL,
     val expandMoreParameters: Boolean = true,
 )
 
@@ -74,11 +75,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onRegionChange(region: OtaRegion) {
         _uiState.update { state ->
+            val queryStrategy = normalizeQueryStrategy(state.formState.queryStrategy, region)
             state.copy(
                 formState = state.formState.copy(
                     otaRegion = region,
                     model = deriveModel(state.formState.otaVersion, region),
                     carrier = defaultCarrier(region),
+                    queryStrategy = queryStrategy,
+                    updateMode = normalizeUpdateMode(state.formState.updateMode, queryStrategy),
                 )
             )
         }
@@ -86,7 +90,23 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onUpdateModeChange(updateMode: UpdateMode) {
         _uiState.update { state ->
-            state.copy(formState = state.formState.copy(updateMode = updateMode))
+            state.copy(
+                formState = state.formState.copy(
+                    updateMode = normalizeUpdateMode(updateMode, state.formState.queryStrategy)
+                )
+            )
+        }
+    }
+
+    fun onQueryStrategyChange(queryStrategy: QueryStrategy) {
+        _uiState.update { state ->
+            val normalizedStrategy = normalizeQueryStrategy(queryStrategy, state.formState.otaRegion)
+            state.copy(
+                formState = state.formState.copy(
+                    queryStrategy = normalizedStrategy,
+                    updateMode = normalizeUpdateMode(state.formState.updateMode, normalizedStrategy),
+                )
+            )
         }
     }
 
@@ -103,12 +123,21 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun applyHistoryItem(item: HistoryUtils.HistoryItem) {
         _uiState.update { state ->
             val region = runCatching { OtaRegion.valueOf(item.region) }.getOrDefault(OtaRegion.CN)
+            val queryStrategy = normalizeQueryStrategy(
+                runCatching { QueryStrategy.valueOf(item.queryStrategy) }.getOrDefault(QueryStrategy.NORMAL),
+                region
+            )
             state.copy(
                 formState = state.formState.copy(
                     otaVersion = item.otaVersion,
                     model = item.model,
                     carrier = item.carrier,
                     otaRegion = region,
+                    queryStrategy = queryStrategy,
+                    updateMode = normalizeUpdateMode(
+                        runCatching { UpdateMode.valueOf(item.updateMode) }.getOrDefault(UpdateMode.STABLE),
+                        queryStrategy
+                    ),
                 )
             )
         }
@@ -145,18 +174,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val formState = _uiState.value.formState
+        val effectiveMode = normalizeUpdateMode(formState.updateMode, formState.queryStrategy)
         val args = QueryUpdateArgs().also {
             it.otaVersion = formState.otaVersion
             it.region = formState.otaRegion.name
             it.model = formState.model
             it.nvCarrier = formState.carrier
-            it.mode = formState.updateMode.value
+            it.mode = effectiveMode.value
+            it.anti = formState.queryStrategy == QueryStrategy.ANTI
+            it.gray = formState.queryStrategy == QueryStrategy.GRAY
+            it.grayNew = formState.queryStrategy == QueryStrategy.GRAYNEW
         }
         val historyItem = HistoryUtils.HistoryItem(
             otaVersion = formState.otaVersion,
             region = formState.otaRegion.name,
             model = formState.model,
             carrier = formState.carrier,
+            updateMode = effectiveMode.name,
+            queryStrategy = formState.queryStrategy.name,
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -197,11 +232,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private fun buildInitialFormState(): HomeFormState {
         val otaVersion = systemOtaVersion
         val region = OtaRegion.CN
+        val queryStrategy = QueryStrategy.NORMAL
         return HomeFormState(
             otaVersion = otaVersion,
             model = deriveModel(otaVersion, region),
             carrier = defaultCarrier(region),
             otaRegion = region,
+            queryStrategy = queryStrategy,
+            updateMode = normalizeUpdateMode(UpdateMode.STABLE, queryStrategy),
         )
     }
 
@@ -216,5 +254,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun defaultCarrier(region: OtaRegion): String {
         return Updater.getConfig(region.name, false).carrierID
+    }
+
+    private fun normalizeQueryStrategy(strategy: QueryStrategy, region: OtaRegion): QueryStrategy {
+        return strategy.takeIf { it in availableQueryStrategies(region) } ?: QueryStrategy.NORMAL
+    }
+
+    private fun normalizeUpdateMode(mode: UpdateMode, strategy: QueryStrategy): UpdateMode {
+        return mode.takeIf { it in availableUpdateModes(strategy) } ?: availableUpdateModes(strategy).first()
     }
 }

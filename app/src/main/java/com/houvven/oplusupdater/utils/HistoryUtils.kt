@@ -18,7 +18,9 @@ object HistoryUtils {
         val otaVersion: String,
         val region: String,
         val model: String,
-        val carrier: String
+        val carrier: String,
+        val updateMode: String = "STABLE",
+        val queryStrategy: String = "NORMAL",
     )
 
     fun saveHistory(context: Context, item: HistoryItem) {

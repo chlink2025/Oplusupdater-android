@@ -15,6 +15,29 @@
 - 解析 `payload.bin` 并列出可提取分区
 - 导出单个分区镜像到下载目录
 
+## Android 查询策略
+
+当前 Android UI 已接入第一批 tracker 风格查询策略：
+
+- `Normal`：普通查询
+- `Gray`：CN 灰度通道查询
+- `Anti`：反查询限制绕过
+- `GrayNew`：先 taste 探测、再切 gray 的追灰流程
+
+当前 UI 的联动规则如下：
+
+- 选择 `Anti` 后，查询模式会自动固定为 `taste`
+- 选择 `GrayNew` 后，表单中的查询模式会固定为稳定查询；内部仍由 Go 核心执行“taste -> gray”两阶段流程
+- 非 `CN` 区域不会显示 `Gray` 和 `GrayNew`
+- 搜索历史会保存并恢复查询策略与查询模式
+
+当前 Android UI 仍未开放以下高级参数：
+
+- `genshin`
+- `components`
+- `pre`
+- `guid`
+
 ## Project Layout
 
 - `app/`：Android Compose 客户端
@@ -72,7 +95,7 @@ cd ..
 
 ## Verified Status
 
-截至 `2026-04-24`，当前仓库已验证：
+截至 `2026-04-27`，当前仓库已验证：
 
 - `OplusUpdater/` 下 `go test ./...` 通过
 - `gomobile bind` 可生成新的 `updater.aar`

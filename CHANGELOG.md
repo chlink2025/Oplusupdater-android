@@ -2,6 +2,8 @@
 
 ## 1.1.0-dev
 
+- Android UI 接入第一批查询策略参数：`gray`、`anti`、`graynew`
+- 将 `anti -> taste`、`graynew -> stable` 与“非 CN 区域不暴露 gray/graynew” 的联动规则收敛到 `HomeViewModel`
 - 新增 `UpdateQueryResponseCardViewModel`，将 OTA 元数据读取与组件下载 URL 解析从 `UpdateQueryResponseCard` 下沉出 Composable
 - 调整 `UpdateQueryResponseCard` 的绑定边界，改为在响应变化时统一派发加载事件，由状态层承接组件解析与 metadata 拉取
 - 新增 `UpdateLogViewModel`，将更新日志 HTML 的加载、缓存、错误与重试状态从 `UpdateLogDialog` 下沉出 Composable

@@ -73,6 +73,31 @@ enum class UpdateMode(
     TASTE(R.string.update_mode_taste, "taste")
 }
 
+@Keep
+enum class QueryStrategy(
+    @StringRes val strRes: Int,
+) {
+    NORMAL(R.string.query_strategy_normal),
+    GRAY(R.string.query_strategy_gray),
+    ANTI(R.string.query_strategy_anti),
+    GRAYNEW(R.string.query_strategy_graynew),
+}
+
+fun availableQueryStrategies(region: OtaRegion): List<QueryStrategy> {
+    return when (region) {
+        OtaRegion.CN -> QueryStrategy.entries
+        else -> listOf(QueryStrategy.NORMAL, QueryStrategy.ANTI)
+    }
+}
+
+fun availableUpdateModes(strategy: QueryStrategy): List<UpdateMode> {
+    return when (strategy) {
+        QueryStrategy.ANTI -> listOf(UpdateMode.TASTE)
+        QueryStrategy.GRAYNEW -> listOf(UpdateMode.STABLE)
+        else -> UpdateMode.entries
+    }
+}
+
 @delegate:SuppressLint("PrivateApi")
 val systemOtaVersion: String by lazy {
     val clazz = Class.forName("android.os.SystemProperties")
@@ -85,6 +110,8 @@ fun HomeScreen() {
     val homeViewModel: HomeViewModel = viewModel()
     val uiState by homeViewModel.uiState.collectAsState()
     val formState = uiState.formState
+    val strategyOptions = availableQueryStrategies(formState.otaRegion)
+    val modeOptions = availableUpdateModes(formState.queryStrategy)
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
@@ -192,10 +219,24 @@ fun HomeScreen() {
             ) {
                 SuperDropdown(
                     title = stringResource(R.string.update_mode),
-                    items = UpdateMode.entries.map { stringResource(it.strRes) },
-                    selectedIndex = UpdateMode.entries.indexOf(formState.updateMode)
+                    items = modeOptions.map { stringResource(it.strRes) },
+                    selectedIndex = modeOptions.indexOf(formState.updateMode).coerceAtLeast(0)
                 ) {
-                    homeViewModel.onUpdateModeChange(UpdateMode.entries[it])
+                    homeViewModel.onUpdateModeChange(modeOptions[it])
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MiuixTheme.colorScheme.surface)
+            ) {
+                SuperDropdown(
+                    title = stringResource(R.string.query_strategy),
+                    items = strategyOptions.map { stringResource(it.strRes) },
+                    selectedIndex = strategyOptions.indexOf(formState.queryStrategy).coerceAtLeast(0)
+                ) {
+                    homeViewModel.onQueryStrategyChange(strategyOptions[it])
                 }
             }
             

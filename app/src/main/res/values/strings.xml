@@ -57,6 +57,11 @@
     <string name="update_mode">Update Mode</string>
     <string name="update_mode_stable">Stable</string>
     <string name="update_mode_taste">Taste</string>
+    <string name="query_strategy">Query Strategy</string>
+    <string name="query_strategy_normal">Normal</string>
+    <string name="query_strategy_gray">Gray</string>
+    <string name="query_strategy_anti">Anti</string>
+    <string name="query_strategy_graynew">GrayNew</string>
     <string name="release_time">Expired Time</string>
     <string name="update_log_loading">Loading update log...</string>
     <string name="update_log_load_failed">Failed to load update log</string>

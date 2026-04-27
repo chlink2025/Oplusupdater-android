@@ -11,6 +11,29 @@ An OTA query tool based on the official Oplus update API, with an Android client
 - Parse `payload.bin` and list extractable partitions
 - Export a single partition image to the downloads directory
 
+## Android Query Strategies
+
+The Android UI currently exposes the first batch of tracker-style query strategies:
+
+- `Normal`: regular query flow
+- `Gray`: CN gray channel query
+- `Anti`: anti-restriction query flow
+- `GrayNew`: taste probe first, then gray follow-up flow
+
+Current UI-side behavior:
+
+- Selecting `Anti` automatically locks the query mode to `taste`
+- Selecting `GrayNew` keeps the form in stable/manual mode; the Go core still performs the internal `taste -> gray` two-stage flow
+- Non-`CN` regions do not expose `Gray` or `GrayNew`
+- Search history restores both the query strategy and the query mode
+
+The following advanced parameters are still not exposed in the Android form:
+
+- `genshin`
+- `components`
+- `pre`
+- `guid`
+
 ## Project Layout
 
 - `app/`: Android Compose client
@@ -68,7 +91,7 @@ See [OplusUpdater/README.md](OplusUpdater/README.md) for more Go-specific detail
 
 ## Verified Status
 
-As of `2026-04-24`, the repository has been verified with:
+As of `2026-04-27`, the repository has been verified with:
 
 - `go test ./...` passing under `OplusUpdater/`
 - a successful `gomobile bind` that regenerates `updater.aar`
