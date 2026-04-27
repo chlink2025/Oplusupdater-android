@@ -93,28 +93,12 @@ enum class GenshinMode(
     OVT(R.string.genshin_ovt, "2"),
 }
 
-fun availableQueryStrategies(region: OtaRegion): List<QueryStrategy> {
-    return when (region) {
-        OtaRegion.CN -> QueryStrategy.entries
-        else -> listOf(QueryStrategy.NORMAL, QueryStrategy.ANTI)
-    }
+fun supportsGrayOptions(region: OtaRegion): Boolean {
+    return region == OtaRegion.CN
 }
 
-fun availableUpdateModes(strategy: QueryStrategy): List<UpdateMode> {
-    return when (strategy) {
-        QueryStrategy.ANTI -> listOf(UpdateMode.TASTE)
-        QueryStrategy.GRAYNEW -> listOf(UpdateMode.STABLE)
-        else -> UpdateMode.entries
-    }
-}
-
-fun requiresGuidForQuery(strategy: QueryStrategy, mode: UpdateMode, preEnabled: Boolean): Boolean {
-    if (preEnabled) {
-        return true
-    }
-    return strategy != QueryStrategy.ANTI &&
-        strategy != QueryStrategy.GRAYNEW &&
-        mode == UpdateMode.TASTE
+fun requiresGuidForQuery(mode: UpdateMode, preEnabled: Boolean): Boolean {
+    return preEnabled || mode == UpdateMode.TASTE
 }
 
 @delegate:SuppressLint("PrivateApi")
@@ -129,10 +113,8 @@ fun HomeScreen() {
     val homeViewModel: HomeViewModel = viewModel()
     val uiState by homeViewModel.uiState.collectAsState()
     val formState = uiState.formState
-    val strategyOptions = availableQueryStrategies(formState.otaRegion)
-    val modeOptions = availableUpdateModes(formState.queryStrategy)
+    val modeOptions = UpdateMode.entries
     val guidRequired = requiresGuidForQuery(
-        strategy = formState.queryStrategy,
         mode = formState.updateMode,
         preEnabled = formState.preEnabled
     )
@@ -278,6 +260,67 @@ fun HomeScreen() {
                         onValueChange = { homeViewModel.onComponentsInputChange(it) },
                         label = stringResource(R.string.components)
                     )
+
+                    if (supportsGrayOptions(formState.otaRegion)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MiuixTheme.colorScheme.surface)
+                            ) {
+                                SuperDropdown(
+                                    title = stringResource(R.string.query_strategy_gray),
+                                    items = listOf(
+                                        stringResource(R.string.preview_disabled),
+                                        stringResource(R.string.preview_enabled)
+                                    ),
+                                    selectedIndex = if (formState.grayEnabled) 1 else 0
+                                ) {
+                                    homeViewModel.onGrayEnabledChange(it == 1)
+                                }
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MiuixTheme.colorScheme.surface)
+                            ) {
+                                SuperDropdown(
+                                    title = stringResource(R.string.query_strategy_graynew),
+                                    items = listOf(
+                                        stringResource(R.string.preview_disabled),
+                                        stringResource(R.string.preview_enabled)
+                                    ),
+                                    selectedIndex = if (formState.grayNewEnabled) 1 else 0
+                                ) {
+                                    homeViewModel.onGrayNewEnabledChange(it == 1)
+                                }
+                            }
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MiuixTheme.colorScheme.surface)
+                    ) {
+                        SuperDropdown(
+                            title = stringResource(R.string.query_strategy_anti),
+                            items = listOf(
+                                stringResource(R.string.preview_disabled),
+                                stringResource(R.string.preview_enabled)
+                            ),
+                            selectedIndex = if (formState.antiEnabled) 1 else 0
+                        ) {
+                            homeViewModel.onAntiEnabledChange(it == 1)
+                        }
+                    }
                 }
             }
 
@@ -292,20 +335,6 @@ fun HomeScreen() {
                     selectedIndex = OtaRegion.entries.indexOf(formState.otaRegion)
                 ) {
                     homeViewModel.onRegionChange(OtaRegion.entries[it])
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MiuixTheme.colorScheme.surface)
-            ) {
-                SuperDropdown(
-                    title = stringResource(R.string.query_strategy),
-                    items = strategyOptions.map { stringResource(it.strRes) },
-                    selectedIndex = strategyOptions.indexOf(formState.queryStrategy).coerceAtLeast(0)
-                ) {
-                    homeViewModel.onQueryStrategyChange(strategyOptions[it])
                 }
             }
 

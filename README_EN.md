@@ -11,14 +11,14 @@ An OTA query tool based on the official Oplus update API, with an Android client
 - Parse `payload.bin` and list extractable partitions
 - Export a single partition image to the downloads directory
 
-## Android Query Strategies
+## Android Query Parameters
 
-The Android UI now exposes the tracker-style query strategies plus the second batch of advanced parameters:
+The Android UI now exposes the tracker-style OTA query parameters:
 
-- `Normal`: regular query flow
 - `Gray`: CN gray channel query
 - `Anti`: anti-restriction query flow
 - `GrayNew`: taste probe first, then gray follow-up flow
+- `Update Mode`: the current UI exposes `manual / taste`
 - `Genshin`: `Off / YS / Ovt` OTA prefix decoration
 - `Preview Query`: toggles `pre`
 - `GUID`: 64-character hexadecimal device identifier
@@ -26,13 +26,14 @@ The Android UI now exposes the tracker-style query strategies plus the second ba
 
 Current UI-side behavior:
 
-- Selecting `Anti` automatically locks the query mode to `taste`
-- Selecting `GrayNew` keeps the form in stable/manual mode; the Go core still performs the internal `taste -> gray` two-stage flow
+- `Gray / Anti / GrayNew` are now independent flags instead of a mutually exclusive strategy selector
+- `Anti` no longer locks the form mode to `taste`; the core only applies tracker-style `taste` probing inside the prefix auto-complete flow
+- `GrayNew` no longer locks the form mode to stable/manual; the core handles the internal taste probe and keeps the user-selected `Update Mode` for the final gray query
 - Non-`CN` regions do not expose `Gray` or `GrayNew`
-- Preview queries and direct `Taste` queries require a 64-character `GUID`
-- `Anti` and `GrayNew` may use taste internally, but they do not require a `GUID` by themselves unless `Preview Query` is also enabled
+- Preview queries and user-selected `Taste` queries require a 64-character `GUID`
+- The internal taste probing used by `Anti / GrayNew` does not independently require a `GUID`; only `Preview Query` or an explicit `Taste` selection does
 - `Genshin` and `Preview Query` can be enabled together; OTA prefix decoration follows the Go core / tracker precedence rules, where `YS / Ovt` wins over `PRE`
-- Search history restores the query strategy, query mode, and `genshin / pre / guid / components`
+- Search history restores `gray / anti / graynew / mode / genshin / pre / guid / components`
 
 ## Project Layout
 

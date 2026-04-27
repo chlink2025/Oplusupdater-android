@@ -15,14 +15,14 @@
 - 解析 `payload.bin` 并列出可提取分区
 - 导出单个分区镜像到下载目录
 
-## Android 查询策略
+## Android 查询参数
 
-当前 Android UI 已接入 tracker 风格查询策略与第二批高级参数：
+当前 Android UI 已接入 tracker 风格 OTA 查询参数：
 
-- `Normal`：普通查询
 - `Gray`：CN 灰度通道查询
 - `Anti`：反查询限制绕过
 - `GrayNew`：先 taste 探测、再切 gray 的追灰流程
+- `Update Mode`：当前 UI 暂开放 `manual / taste`
 - `Genshin`：`Off / YS / Ovt` 前缀装饰
 - `Preview Query`：切换 `pre`
 - `GUID`：64 位十六进制设备标识
@@ -30,13 +30,14 @@
 
 当前 UI 的联动规则如下：
 
-- 选择 `Anti` 后，查询模式会自动固定为 `taste`
-- 选择 `GrayNew` 后，表单中的查询模式会固定为稳定查询；内部仍由 Go 核心执行“taste -> gray”两阶段流程
+- `Gray / Anti / GrayNew` 现在是独立开关，不再被收敛成互斥的单选策略
+- `Anti` 不再在表单层强制锁定 `taste`；它只会在前缀自动补全链路里由核心内部按 tracker 语义使用 `taste`
+- `GrayNew` 不再在表单层强制锁定稳定模式；其 taste 探测阶段由核心内部处理，最终 gray 查询沿用用户显式选择的 `Update Mode`
 - 非 `CN` 区域不会显示 `Gray` 和 `GrayNew`
-- 预览版查询与“直接选择 `Taste` 模式”的查询，都要求填写 64 位 `GUID`
-- `Anti` 与 `GrayNew` 虽然内部会走 taste 链路，但不会单独强制 `GUID`；只有同时启用 `Preview Query` 时才要求 `GUID`
+- 预览版查询与用户显式选择 `Taste` 模式的查询，都要求填写 64 位 `GUID`
+- `Anti / GrayNew` 的内部 taste 探测不会单独触发 GUID 必填；只有 `Preview Query` 或用户显式选择 `Taste` 才会要求 `GUID`
 - `Genshin` 与 `Preview Query` 可同时开启，OTA 前缀装饰优先级遵循 Go 核心 / tracker：`YS / Ovt` 优先于 `PRE`
-- 搜索历史会保存并恢复查询策略、查询模式以及 `genshin / pre / guid / components`
+- 搜索历史会保存并恢复 `gray / anti / graynew / mode / genshin / pre / guid / components`
 
 ## Project Layout
 

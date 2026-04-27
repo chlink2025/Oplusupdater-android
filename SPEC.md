@@ -38,7 +38,7 @@
 - 输入 `OTA Version`
 - 选择 `Region`
 - 查看自动推导的 `Model` 与 `NvCarrier`
-- 选择 `Normal / Gray / Anti / GrayNew` 查询策略
+- 独立配置 `Gray / Anti / GrayNew`
 - 选择 `Stable` 或 `Taste` 更新模式
 - 配置 `Genshin / Preview / GUID / Components`
 - 查看最近 10 条查询历史
@@ -51,8 +51,9 @@
 
 当前 Android UI 额外遵循以下规则：
 
-- `Anti` 会把查询模式锁定到 `taste`
-- `GrayNew` 在表单中保持稳定查询，但 Go 核心内部仍执行 `taste -> gray`
+- `Gray / Anti / GrayNew` 是独立参数，不互斥
+- `Anti` 不会在表单层强制改写 `Update Mode`，但前缀自动补全时核心内部仍会按 tracker 语义走 `taste`
+- `GrayNew` 不会在表单层强制改写 `Update Mode`，但核心内部仍执行 `taste -> gray`
 - 预览版查询与直接 `Taste` 查询需要 64 位十六进制 `GUID`
 - `Anti / GrayNew` 内部的 taste 流程不会单独强制 `GUID`
 - `Genshin` 与 `Preview` 可同时开启，当前前缀装饰优先级为 `YS / Ovt > PRE`

@@ -2,6 +2,10 @@
 
 ## 1.1.0-dev
 
+- 重新对照 `OPlus-Tracker-main/tomboy_pro.py` 后，移除了 Android UI 中把 `gray / anti / graynew` 折叠成互斥单选策略的设计
+- 取消 `anti -> taste` 与 `graynew -> stable` 的表单层强锁定，改为保留独立 flags 与显式 `Update Mode`
+- 将 GUID 约束简化为 `pre` 或用户显式选择 `taste` 时必填，避免把 `anti / graynew` 的内部 taste 探测误判为表单必填 GUID
+- 搜索历史改为保存并恢复独立的 `gray / anti / graynew` 开关
 - Android UI 接入第二批高级查询参数：`genshin`、`pre`、`guid`、`components`
 - 为 direct taste / preview 查询补齐 64 位 `GUID` 必填与格式校验，并将高级参数纳入搜索历史恢复
 - 更新 `README.md`、`README_EN.md`、`SPEC.md` 与 `ARCHITECTURE.md`，明确 Android UI 的高级参数联动规则

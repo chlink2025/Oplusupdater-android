@@ -24,7 +24,9 @@ data class HomeFormState(
     val carrier: String = "",
     val otaRegion: OtaRegion = OtaRegion.CN,
     val updateMode: UpdateMode = UpdateMode.STABLE,
-    val queryStrategy: QueryStrategy = QueryStrategy.NORMAL,
+    val grayEnabled: Boolean = false,
+    val antiEnabled: Boolean = false,
+    val grayNewEnabled: Boolean = false,
     val genshinMode: GenshinMode = GenshinMode.OFF,
     val preEnabled: Boolean = false,
     val guid: String = "",
@@ -81,14 +83,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onRegionChange(region: OtaRegion) {
         _uiState.update { state ->
-            val queryStrategy = normalizeQueryStrategy(state.formState.queryStrategy, region)
+            val supportsGray = supportsGrayOptions(region)
             state.copy(
                 formState = state.formState.copy(
                     otaRegion = region,
                     model = deriveModel(state.formState.otaVersion, region),
                     carrier = defaultCarrier(region),
-                    queryStrategy = queryStrategy,
-                    updateMode = normalizeUpdateMode(state.formState.updateMode, queryStrategy),
+                    grayEnabled = state.formState.grayEnabled && supportsGray,
+                    grayNewEnabled = state.formState.grayNewEnabled && supportsGray,
                 )
             )
         }
@@ -97,22 +99,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun onUpdateModeChange(updateMode: UpdateMode) {
         _uiState.update { state ->
             state.copy(
-                formState = state.formState.copy(
-                    updateMode = normalizeUpdateMode(updateMode, state.formState.queryStrategy)
-                )
+                formState = state.formState.copy(updateMode = updateMode)
             )
         }
     }
 
-    fun onQueryStrategyChange(queryStrategy: QueryStrategy) {
+    fun onGrayEnabledChange(grayEnabled: Boolean) {
         _uiState.update { state ->
-            val normalizedStrategy = normalizeQueryStrategy(queryStrategy, state.formState.otaRegion)
             state.copy(
-                formState = state.formState.copy(
-                    queryStrategy = normalizedStrategy,
-                    updateMode = normalizeUpdateMode(state.formState.updateMode, normalizedStrategy),
-                )
+                formState = state.formState.copy(grayEnabled = grayEnabled)
             )
+        }
+    }
+
+    fun onAntiEnabledChange(antiEnabled: Boolean) {
+        _uiState.update { state ->
+            state.copy(formState = state.formState.copy(antiEnabled = antiEnabled))
+        }
+    }
+
+    fun onGrayNewEnabledChange(grayNewEnabled: Boolean) {
+        _uiState.update { state ->
+            state.copy(formState = state.formState.copy(grayNewEnabled = grayNewEnabled))
         }
     }
 
@@ -153,22 +161,21 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun applyHistoryItem(item: HistoryUtils.HistoryItem) {
         _uiState.update { state ->
             val region = runCatching { OtaRegion.valueOf(item.region) }.getOrDefault(OtaRegion.CN)
-            val queryStrategy = normalizeQueryStrategy(
-                runCatching { QueryStrategy.valueOf(item.queryStrategy) }.getOrDefault(QueryStrategy.NORMAL),
-                region
-            )
-            val updateMode = normalizeUpdateMode(
-                runCatching { UpdateMode.valueOf(item.updateMode) }.getOrDefault(UpdateMode.STABLE),
-                queryStrategy
-            )
+            val legacyStrategy = runCatching { QueryStrategy.valueOf(item.queryStrategy) }.getOrDefault(QueryStrategy.NORMAL)
+            val supportsGray = supportsGrayOptions(region)
+            val grayEnabled = supportsGray && (item.grayEnabled || legacyStrategy == QueryStrategy.GRAY)
+            val grayNewEnabled = supportsGray && (item.grayNewEnabled || legacyStrategy == QueryStrategy.GRAYNEW)
+            val antiEnabled = item.antiEnabled || legacyStrategy == QueryStrategy.ANTI
             state.copy(
                 formState = state.formState.copy(
                     otaVersion = item.otaVersion,
                     model = item.model,
                     carrier = item.carrier,
                     otaRegion = region,
-                    queryStrategy = queryStrategy,
-                    updateMode = updateMode,
+                    updateMode = runCatching { UpdateMode.valueOf(item.updateMode) }.getOrDefault(UpdateMode.STABLE),
+                    grayEnabled = grayEnabled,
+                    antiEnabled = antiEnabled,
+                    grayNewEnabled = grayNewEnabled,
                     genshinMode = runCatching { GenshinMode.valueOf(item.genshinMode) }.getOrDefault(GenshinMode.OFF),
                     preEnabled = item.preEnabled,
                     guid = item.guid.trim(),
@@ -209,8 +216,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val formState = _uiState.value.formState
-        val effectiveMode = normalizeUpdateMode(formState.updateMode, formState.queryStrategy)
-        if (!validateQueryArgs(formState, effectiveMode)) {
+        if (!validateQueryArgs(formState)) {
             return
         }
 
@@ -219,11 +225,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             it.region = formState.otaRegion.name
             it.model = formState.model
             it.nvCarrier = formState.carrier
-            it.mode = effectiveMode.value
+            it.mode = formState.updateMode.value
             it.guid = formState.guid.trim()
-            it.anti = formState.queryStrategy == QueryStrategy.ANTI
-            it.gray = formState.queryStrategy == QueryStrategy.GRAY
-            it.grayNew = formState.queryStrategy == QueryStrategy.GRAYNEW
+            it.anti = formState.antiEnabled
+            it.gray = formState.grayEnabled
+            it.grayNew = formState.grayNewEnabled
             it.pre = formState.preEnabled
             it.genshin = formState.genshinMode.value
             it.componentsInput = formState.componentsInput.trim()
@@ -233,8 +239,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             region = formState.otaRegion.name,
             model = formState.model,
             carrier = formState.carrier,
-            updateMode = effectiveMode.name,
-            queryStrategy = formState.queryStrategy.name,
+            updateMode = formState.updateMode.name,
+            queryStrategy = toLegacyQueryStrategy(formState).name,
+            grayEnabled = formState.grayEnabled,
+            antiEnabled = formState.antiEnabled,
+            grayNewEnabled = formState.grayNewEnabled,
             genshinMode = formState.genshinMode.name,
             preEnabled = formState.preEnabled,
             guid = formState.guid.trim(),
@@ -279,14 +288,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private fun buildInitialFormState(): HomeFormState {
         val otaVersion = systemOtaVersion
         val region = OtaRegion.CN
-        val queryStrategy = QueryStrategy.NORMAL
         return HomeFormState(
             otaVersion = otaVersion,
             model = deriveModel(otaVersion, region),
             carrier = defaultCarrier(region),
             otaRegion = region,
-            queryStrategy = queryStrategy,
-            updateMode = normalizeUpdateMode(UpdateMode.STABLE, queryStrategy),
+            updateMode = UpdateMode.STABLE,
         )
     }
 
@@ -303,9 +310,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         return Updater.getConfig(region.name, false).carrierID
     }
 
-    private fun validateQueryArgs(formState: HomeFormState, effectiveMode: UpdateMode): Boolean {
+    private fun validateQueryArgs(formState: HomeFormState): Boolean {
         val guid = formState.guid.trim()
-        if (requiresGuidForQuery(formState.queryStrategy, effectiveMode, formState.preEnabled) && guid.isEmpty()) {
+        if (requiresGuidForQuery(formState.updateMode, formState.preEnabled) && guid.isEmpty()) {
             _messages.tryEmit(appContext.getString(R.string.guid_required_message))
             return false
         }
@@ -316,11 +323,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         return true
     }
 
-    private fun normalizeQueryStrategy(strategy: QueryStrategy, region: OtaRegion): QueryStrategy {
-        return strategy.takeIf { it in availableQueryStrategies(region) } ?: QueryStrategy.NORMAL
-    }
-
-    private fun normalizeUpdateMode(mode: UpdateMode, strategy: QueryStrategy): UpdateMode {
-        return mode.takeIf { it in availableUpdateModes(strategy) } ?: availableUpdateModes(strategy).first()
+    private fun toLegacyQueryStrategy(formState: HomeFormState): QueryStrategy {
+        return when {
+            formState.grayNewEnabled -> QueryStrategy.GRAYNEW
+            formState.antiEnabled -> QueryStrategy.ANTI
+            formState.grayEnabled -> QueryStrategy.GRAY
+            else -> QueryStrategy.NORMAL
+        }
     }
 }
