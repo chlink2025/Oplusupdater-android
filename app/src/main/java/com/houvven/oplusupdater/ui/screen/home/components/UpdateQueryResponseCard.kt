@@ -24,9 +24,7 @@ import com.houvven.oplusupdater.domain.UpdateQueryResponse
 import com.houvven.oplusupdater.utils.DownloadUrlResolver
 import com.houvven.oplusupdater.utils.StorageUnitUtil
 import com.houvven.oplusupdater.utils.toast
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import top.yukonga.miuix.kmp.basic.BasicComponentColors
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
@@ -112,51 +110,31 @@ private fun UpdateQueryResponseCardContent(
 ) = with(response) {
     val firstComponentUrl = components?.firstOrNull()?.componentPackets?.url
     val updateLogUrl = description?.panelUrl
+    val resolvableComponentUrls = components
+        ?.mapNotNull { it?.componentPackets?.url }
+        ?.filter { it.contains("/downloadCheck") }
+        .orEmpty()
+    val responseCardViewModel: UpdateQueryResponseCardViewModel = viewModel()
+    val responseCardUiState by responseCardViewModel.uiState.collectAsState()
     val updateLogViewModel: UpdateLogViewModel = viewModel()
     val updateLogUiState by updateLogViewModel.uiState.collectAsState()
 
     var showUpdateLogDialog by remember(updateLogUrl) { mutableStateOf(false) }
+    val responseIdentity = listOf(
+        versionName,
+        realOtaVersion,
+        otaVersion,
+        updateLogUrl,
+        firstComponentUrl,
+        resolvableComponentUrls.joinToString("|")
+    ).joinToString("::")
 
-    var buildTime by remember { mutableStateOf<String?>(null) }
-    var metadataSecurityPatch by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(updateLogUrl) {
+    LaunchedEffect(responseIdentity) {
         updateLogViewModel.reset()
-    }
-
-    LaunchedEffect(firstComponentUrl) {
-        buildTime = null
-        metadataSecurityPatch = null
-
-        if (firstComponentUrl.isNullOrEmpty()) {
-            return@LaunchedEffect
-        }
-
-        try {
-            val resolved = withContext(Dispatchers.IO) {
-                DownloadUrlResolver.resolveUrl(firstComponentUrl)
-            }
-            val urlToUse = resolved.getDownloadUrl()
-            val metadata = withContext(Dispatchers.IO) {
-                com.houvven.oplusupdater.utils.MetadataUtils.getMetadata(urlToUse)
-            }
-
-            if (metadata.isNotEmpty()) {
-                val timestamp = com.houvven.oplusupdater.utils.MetadataUtils.getMetadataValue(metadata, "post-timestamp=")
-                if (timestamp.isNotEmpty()) {
-                    runCatching {
-                        val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
-                        buildTime = sdf.format(Date(timestamp.toLong() * 1000))
-                    }
-                }
-                val patchLevel = com.houvven.oplusupdater.utils.MetadataUtils.getMetadataValue(metadata, "post-security-patch-level=")
-                if (patchLevel.isNotEmpty()) {
-                    metadataSecurityPatch = patchLevel
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        responseCardViewModel.bindResponse(
+            firstComponentUrl = firstComponentUrl,
+            resolvableComponentUrls = resolvableComponentUrls
+        )
     }
 
     Column(
@@ -188,11 +166,11 @@ private fun UpdateQueryResponseCardContent(
             )
             SuperArrowWrapper(
                 title = stringResource(R.string.security_patch),
-                summary = metadataSecurityPatch ?: securityPatch ?: securityPatchVendor
+                summary = responseCardUiState.metadataSecurityPatch ?: securityPatch ?: securityPatchVendor
             )
             SuperArrowWrapper(
                 title = stringResource(R.string.published_time),
-                summary = buildTime ?: publishedTime?.let {
+                summary = responseCardUiState.buildTime ?: publishedTime?.let {
                     SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault())
                         .format(Date(it))
                 }
@@ -212,6 +190,7 @@ private fun UpdateQueryResponseCardContent(
             ComponentPacketCard(
                 componentName = component.componentName,
                 componentPackets = componentPackets,
+                resolvedUrlInfo = componentPackets.url?.let(responseCardUiState.resolvedUrlInfoByOriginalUrl::get),
                 systemVersion = realOtaVersion ?: otaVersion ?: "Unknown"
             )
         }
@@ -233,37 +212,14 @@ private fun UpdateQueryResponseCardContent(
 private fun ComponentPacketCard(
     componentName: String?,
     componentPackets: UpdateQueryResponse.Component.ComponentPackets,
+    resolvedUrlInfo: DownloadUrlResolver.ResolvedUrl?,
     systemVersion: String,
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
     val originalUrl = componentPackets.url
-    val needsResolve = originalUrl?.contains("/downloadCheck") == true
     val size = componentPackets.size?.toLongOrNull()?.let(StorageUnitUtil::formatSize)
-
-    var resolvedUrlInfo by remember(originalUrl) {
-        mutableStateOf<DownloadUrlResolver.ResolvedUrl?>(null)
-    }
-
-    LaunchedEffect(originalUrl) {
-        resolvedUrlInfo = null
-        if (originalUrl.isNullOrEmpty() || !needsResolve) {
-            return@LaunchedEffect
-        }
-
-        resolvedUrlInfo = withContext(Dispatchers.IO) {
-            runCatching { DownloadUrlResolver.resolveUrl(originalUrl) }.getOrElse {
-                it.printStackTrace()
-                DownloadUrlResolver.ResolvedUrl(
-                    originalUrl = originalUrl,
-                    resolvedUrl = null,
-                    needsResolution = true,
-                    error = it.message
-                )
-            }
-        }
-    }
 
     val finalDownloadUrl = when {
         resolvedUrlInfo != null -> resolvedUrlInfo?.getDownloadUrl()

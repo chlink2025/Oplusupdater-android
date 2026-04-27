@@ -58,6 +58,10 @@
   - 更新日志 HTML 的加载入口
   - 更新日志的缓存、错误与重试状态
 
+- `ui/screen/home/components/UpdateQueryResponseCardViewModel.kt`
+  - OTA 元数据读取入口
+  - 组件下载 URL 解析状态与结果缓存
+
 - `domain/UpdateQueryResponse.kt`
   - OTA 返回体序列化模型
 
@@ -189,6 +193,10 @@ pkg/updater/*.go
   - 已补最小加载/失败/重试三态，并收敛 `WebView` 的文件与内容访问权限。
   - 当前已改为纯渲染弹窗，由 `UpdateLogViewModel` 承接 HTML 拉取、缓存与重试。
 
+- `UpdateQueryResponseCard.kt`
+  - 已不再直接执行 OTA 元数据读取与组件下载 URL 解析。
+  - 当前改为在响应变化时统一派发加载事件，由 `UpdateQueryResponseCardViewModel` 维护二级状态。
+
 - `PartitionListView.kt`
   - 使用 `Environment.getExternalStoragePublicDirectory` 与 `getExternalStorageDirectory`，是旧版存储方案。
   - 对现代 Android 的分区导出兼容性与权限处理不够稳健。
@@ -296,7 +304,8 @@ pkg/updater/*.go
 6. 已完成第三轮：把 `AboutInfoDialog` 开关迁入 `HomeViewModel`，进一步压缩 `HomeScreen` 本地状态。
 7. 已完成第四轮：为 `UpdateLogDialog` 增加加载/失败/重试三态，避免空白弹窗，并为 `WebView` 增加保守的访问限制。
 8. 已完成第五轮：新增 `UpdateLogViewModel`，把更新日志 HTML 的加载、缓存、错误与重试从 `UpdateLogDialog` 下沉出 Composable。
-9. 待完成：继续把更多 UI 事件与数据加载边界从 `HomeScreen` 收敛到更清晰的状态模型中，再评估是否继续扩大 `ViewModel` 职责。
+9. 已完成第六轮：新增 `UpdateQueryResponseCardViewModel`，把 OTA 元数据读取与组件下载 URL 解析从 `UpdateQueryResponseCard` 下沉出 Composable。
+10. 待完成：继续把更多 UI 事件与数据加载边界从 `HomeScreen` 收敛到更清晰的状态模型中，再评估是否继续扩大 `ViewModel` 职责。
 
 ### P4 下载与分区导出
 
