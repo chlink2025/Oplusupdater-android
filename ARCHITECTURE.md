@@ -49,12 +49,13 @@
 - `ui/screen/home/HomeScreen.kt`
   - Android 入口页面
   - 页面渲染与极少量页面级交互
-  - 已提供第一批查询策略 UI：`gray / anti / graynew`
+  - 已提供 tracker 风格查询表单：`gray / anti / graynew / genshin / pre / guid / components`
 
 - `ui/screen/home/HomeViewModel.kt`
   - 查询执行入口
   - 表单状态、对话框状态、查询结果状态、历史记录状态与消息流
   - 统一收敛查询策略联动：`anti -> taste`、`graynew -> stable`、非 CN 区域禁用 `gray / graynew`
+  - 承接 `guid` 必填/格式校验，以及 `genshin / pre / guid / components` 的历史恢复
 
 - `ui/screen/home/components/UpdateLogViewModel.kt`
   - 更新日志 HTML 的加载入口
@@ -190,7 +191,10 @@ pkg/updater/*.go
 
 - `HomeScreen.kt`
   - 已通过 `HomeViewModel` 拆走表单状态、对话框状态、查询执行、历史记录与消息流，但仍直接协调部分页面事件与组合细节。
-  - 当前已接入第一批查询策略 UI：`gray / anti / graynew`；`genshin / components / pre / guid` 仍未进入表单层。
+  - 当前已接入 `gray / anti / graynew / genshin / components / pre / guid`；但表单布局、说明文案与输入约束仍直接写在页面层，尚未继续拆为更小的表单组件。
+
+- `HomeViewModel.kt`
+  - 已收敛策略联动、GUID 校验与高级参数历史恢复，但查询规则仍以内联条件表达，后续若继续扩大参数面，建议再抽离成独立表单规则层。
 
 - `UpdateLogDialog.kt`
   - 已补最小加载/失败/重试三态，并收敛 `WebView` 的文件与内容访问权限。
@@ -309,7 +313,8 @@ pkg/updater/*.go
 8. 已完成第五轮：新增 `UpdateLogViewModel`，把更新日志 HTML 的加载、缓存、错误与重试从 `UpdateLogDialog` 下沉出 Composable。
 9. 已完成第六轮：新增 `UpdateQueryResponseCardViewModel`，把 OTA 元数据读取与组件下载 URL 解析从 `UpdateQueryResponseCard` 下沉出 Composable。
 10. 已完成第七轮：Android UI 接入第一批查询策略 `gray / anti / graynew`，并把模式联动与区域限制统一收敛到 `HomeViewModel`。
-11. 待完成：继续把更多 UI 事件与数据加载边界从 `HomeScreen` 收敛到更清晰的状态模型中，再评估是否继续扩大 `ViewModel` 职责。
+11. 已完成第八轮：Android UI 接入第二批高级参数 `genshin / pre / guid / components`，并补齐 direct taste / preview 的 GUID 约束与历史恢复。
+12. 待完成：继续把更多 UI 事件与数据加载边界从 `HomeScreen` 收敛到更清晰的状态模型中，再评估是否继续扩大 `ViewModel` 职责。
 
 ### P4 下载与分区导出
 

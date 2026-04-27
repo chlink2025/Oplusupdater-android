@@ -16,6 +16,8 @@ import updater.QueryUpdateArgs
 import updater.ResponseResult
 import updater.Updater
 
+private val guidPattern = Regex("^[0-9a-fA-F]{64}$")
+
 data class HomeFormState(
     val otaVersion: String = "",
     val model: String = "",
@@ -23,6 +25,10 @@ data class HomeFormState(
     val otaRegion: OtaRegion = OtaRegion.CN,
     val updateMode: UpdateMode = UpdateMode.STABLE,
     val queryStrategy: QueryStrategy = QueryStrategy.NORMAL,
+    val genshinMode: GenshinMode = GenshinMode.OFF,
+    val preEnabled: Boolean = false,
+    val guid: String = "",
+    val componentsInput: String = "",
     val expandMoreParameters: Boolean = true,
 )
 
@@ -110,6 +116,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onGenshinModeChange(genshinMode: GenshinMode) {
+        _uiState.update { state ->
+            state.copy(formState = state.formState.copy(genshinMode = genshinMode))
+        }
+    }
+
+    fun onPreEnabledChange(preEnabled: Boolean) {
+        _uiState.update { state ->
+            state.copy(formState = state.formState.copy(preEnabled = preEnabled))
+        }
+    }
+
+    fun onGuidChange(guid: String) {
+        _uiState.update { state ->
+            state.copy(formState = state.formState.copy(guid = guid))
+        }
+    }
+
+    fun onComponentsInputChange(componentsInput: String) {
+        _uiState.update { state ->
+            state.copy(formState = state.formState.copy(componentsInput = componentsInput))
+        }
+    }
+
     fun toggleMoreParameters() {
         _uiState.update { state ->
             state.copy(
@@ -127,6 +157,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 runCatching { QueryStrategy.valueOf(item.queryStrategy) }.getOrDefault(QueryStrategy.NORMAL),
                 region
             )
+            val updateMode = normalizeUpdateMode(
+                runCatching { UpdateMode.valueOf(item.updateMode) }.getOrDefault(UpdateMode.STABLE),
+                queryStrategy
+            )
             state.copy(
                 formState = state.formState.copy(
                     otaVersion = item.otaVersion,
@@ -134,10 +168,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     carrier = item.carrier,
                     otaRegion = region,
                     queryStrategy = queryStrategy,
-                    updateMode = normalizeUpdateMode(
-                        runCatching { UpdateMode.valueOf(item.updateMode) }.getOrDefault(UpdateMode.STABLE),
-                        queryStrategy
-                    ),
+                    updateMode = updateMode,
+                    genshinMode = runCatching { GenshinMode.valueOf(item.genshinMode) }.getOrDefault(GenshinMode.OFF),
+                    preEnabled = item.preEnabled,
+                    guid = item.guid.trim(),
+                    componentsInput = item.componentsInput,
                 )
             )
         }
@@ -175,15 +210,23 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         val formState = _uiState.value.formState
         val effectiveMode = normalizeUpdateMode(formState.updateMode, formState.queryStrategy)
+        if (!validateQueryArgs(formState, effectiveMode)) {
+            return
+        }
+
         val args = QueryUpdateArgs().also {
             it.otaVersion = formState.otaVersion
             it.region = formState.otaRegion.name
             it.model = formState.model
             it.nvCarrier = formState.carrier
             it.mode = effectiveMode.value
+            it.guid = formState.guid.trim()
             it.anti = formState.queryStrategy == QueryStrategy.ANTI
             it.gray = formState.queryStrategy == QueryStrategy.GRAY
             it.grayNew = formState.queryStrategy == QueryStrategy.GRAYNEW
+            it.pre = formState.preEnabled
+            it.genshin = formState.genshinMode.value
+            it.componentsInput = formState.componentsInput.trim()
         }
         val historyItem = HistoryUtils.HistoryItem(
             otaVersion = formState.otaVersion,
@@ -192,6 +235,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             carrier = formState.carrier,
             updateMode = effectiveMode.name,
             queryStrategy = formState.queryStrategy.name,
+            genshinMode = formState.genshinMode.name,
+            preEnabled = formState.preEnabled,
+            guid = formState.guid.trim(),
+            componentsInput = formState.componentsInput.trim(),
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -254,6 +301,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun defaultCarrier(region: OtaRegion): String {
         return Updater.getConfig(region.name, false).carrierID
+    }
+
+    private fun validateQueryArgs(formState: HomeFormState, effectiveMode: UpdateMode): Boolean {
+        val guid = formState.guid.trim()
+        if (requiresGuidForQuery(formState.queryStrategy, effectiveMode, formState.preEnabled) && guid.isEmpty()) {
+            _messages.tryEmit(appContext.getString(R.string.guid_required_message))
+            return false
+        }
+        if (guid.isNotEmpty() && !guidPattern.matches(guid)) {
+            _messages.tryEmit(appContext.getString(R.string.guid_invalid_message))
+            return false
+        }
+        return true
     }
 
     private fun normalizeQueryStrategy(strategy: QueryStrategy, region: OtaRegion): QueryStrategy {

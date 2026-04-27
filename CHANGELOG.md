@@ -2,6 +2,10 @@
 
 ## 1.1.0-dev
 
+- Android UI 接入第二批高级查询参数：`genshin`、`pre`、`guid`、`components`
+- 为 direct taste / preview 查询补齐 64 位 `GUID` 必填与格式校验，并将高级参数纳入搜索历史恢复
+- 更新 `README.md`、`README_EN.md`、`SPEC.md` 与 `ARCHITECTURE.md`，明确 Android UI 的高级参数联动规则
+- 再次验证 Android `:app:assembleDebug`，确认新的表单参数可贯通到 `updater.aar`
 - Android UI 接入第一批查询策略参数：`gray`、`anti`、`graynew`
 - 将 `anti -> taste`、`graynew -> stable` 与“非 CN 区域不暴露 gray/graynew” 的联动规则收敛到 `HomeViewModel`
 - 新增 `UpdateQueryResponseCardViewModel`，将 OTA 元数据读取与组件下载 URL 解析从 `UpdateQueryResponseCard` 下沉出 Composable

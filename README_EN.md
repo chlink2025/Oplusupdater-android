@@ -13,26 +13,26 @@ An OTA query tool based on the official Oplus update API, with an Android client
 
 ## Android Query Strategies
 
-The Android UI currently exposes the first batch of tracker-style query strategies:
+The Android UI now exposes the tracker-style query strategies plus the second batch of advanced parameters:
 
 - `Normal`: regular query flow
 - `Gray`: CN gray channel query
 - `Anti`: anti-restriction query flow
 - `GrayNew`: taste probe first, then gray follow-up flow
+- `Genshin`: `Off / YS / Ovt` OTA prefix decoration
+- `Preview Query`: toggles `pre`
+- `GUID`: 64-character hexadecimal device identifier
+- `Components`: incremental OTA component input using `name:version,name:version`
 
 Current UI-side behavior:
 
 - Selecting `Anti` automatically locks the query mode to `taste`
 - Selecting `GrayNew` keeps the form in stable/manual mode; the Go core still performs the internal `taste -> gray` two-stage flow
 - Non-`CN` regions do not expose `Gray` or `GrayNew`
-- Search history restores both the query strategy and the query mode
-
-The following advanced parameters are still not exposed in the Android form:
-
-- `genshin`
-- `components`
-- `pre`
-- `guid`
+- Preview queries and direct `Taste` queries require a 64-character `GUID`
+- `Anti` and `GrayNew` may use taste internally, but they do not require a `GUID` by themselves unless `Preview Query` is also enabled
+- `Genshin` and `Preview Query` can be enabled together; OTA prefix decoration follows the Go core / tracker precedence rules, where `YS / Ovt` wins over `PRE`
+- Search history restores the query strategy, query mode, and `genshin / pre / guid / components`
 
 ## Project Layout
 

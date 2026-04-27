@@ -21,6 +21,10 @@ object HistoryUtils {
         val carrier: String,
         val updateMode: String = "STABLE",
         val queryStrategy: String = "NORMAL",
+        val genshinMode: String = "OFF",
+        val preEnabled: Boolean = false,
+        val guid: String = "",
+        val componentsInput: String = "",
     )
 
     fun saveHistory(context: Context, item: HistoryItem) {

@@ -62,6 +62,18 @@
     <string name="query_strategy_gray">Gray</string>
     <string name="query_strategy_anti">Anti</string>
     <string name="query_strategy_graynew">GrayNew</string>
+    <string name="genshin">Genshin</string>
+    <string name="genshin_off">Off</string>
+    <string name="genshin_ys">YS</string>
+    <string name="genshin_ovt">Ovt</string>
+    <string name="preview_query">Preview Query</string>
+    <string name="preview_disabled">Disabled</string>
+    <string name="preview_enabled">Enabled</string>
+    <string name="guid" translatable="false">GUID</string>
+    <string name="components">Components</string>
+    <string name="guid_required_hint">Preview queries and direct taste queries require a 64-character GUID</string>
+    <string name="guid_required_message">This query requires a 64-character GUID</string>
+    <string name="guid_invalid_message">GUID must be a 64-character hexadecimal string</string>
     <string name="release_time">Expired Time</string>
     <string name="update_log_loading">Loading update log...</string>
     <string name="update_log_load_failed">Failed to load update log</string>

@@ -83,6 +83,16 @@ enum class QueryStrategy(
     GRAYNEW(R.string.query_strategy_graynew),
 }
 
+@Keep
+enum class GenshinMode(
+    @StringRes val strRes: Int,
+    val value: String
+) {
+    OFF(R.string.genshin_off, "0"),
+    YS(R.string.genshin_ys, "1"),
+    OVT(R.string.genshin_ovt, "2"),
+}
+
 fun availableQueryStrategies(region: OtaRegion): List<QueryStrategy> {
     return when (region) {
         OtaRegion.CN -> QueryStrategy.entries
@@ -96,6 +106,15 @@ fun availableUpdateModes(strategy: QueryStrategy): List<UpdateMode> {
         QueryStrategy.GRAYNEW -> listOf(UpdateMode.STABLE)
         else -> UpdateMode.entries
     }
+}
+
+fun requiresGuidForQuery(strategy: QueryStrategy, mode: UpdateMode, preEnabled: Boolean): Boolean {
+    if (preEnabled) {
+        return true
+    }
+    return strategy != QueryStrategy.ANTI &&
+        strategy != QueryStrategy.GRAYNEW &&
+        mode == UpdateMode.TASTE
 }
 
 @delegate:SuppressLint("PrivateApi")
@@ -112,6 +131,11 @@ fun HomeScreen() {
     val formState = uiState.formState
     val strategyOptions = availableQueryStrategies(formState.otaRegion)
     val modeOptions = availableUpdateModes(formState.queryStrategy)
+    val guidRequired = requiresGuidForQuery(
+        strategy = formState.queryStrategy,
+        mode = formState.updateMode,
+        preEnabled = formState.preEnabled
+    )
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
@@ -195,6 +219,65 @@ fun HomeScreen() {
                             label = stringResource(R.string.carrier)
                         )
                     }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MiuixTheme.colorScheme.surface)
+                        ) {
+                            SuperDropdown(
+                                title = stringResource(R.string.genshin),
+                                items = GenshinMode.entries.map { stringResource(it.strRes) },
+                                selectedIndex = GenshinMode.entries.indexOf(formState.genshinMode)
+                            ) {
+                                homeViewModel.onGenshinModeChange(GenshinMode.entries[it])
+                            }
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MiuixTheme.colorScheme.surface)
+                        ) {
+                            SuperDropdown(
+                                title = stringResource(R.string.preview_query),
+                                items = listOf(
+                                    stringResource(R.string.preview_disabled),
+                                    stringResource(R.string.preview_enabled)
+                                ),
+                                selectedIndex = if (formState.preEnabled) 1 else 0
+                            ) {
+                                homeViewModel.onPreEnabledChange(it == 1)
+                            }
+                        }
+                    }
+
+                    TextField(
+                        value = formState.guid,
+                        onValueChange = { homeViewModel.onGuidChange(it.trim()) },
+                        label = stringResource(R.string.guid)
+                    )
+
+                    if (guidRequired) {
+                        Text(
+                            text = stringResource(R.string.guid_required_hint),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    TextField(
+                        value = formState.componentsInput,
+                        onValueChange = { homeViewModel.onComponentsInputChange(it) },
+                        label = stringResource(R.string.components)
+                    )
                 }
             }
 
@@ -218,11 +301,11 @@ fun HomeScreen() {
                     .background(MiuixTheme.colorScheme.surface)
             ) {
                 SuperDropdown(
-                    title = stringResource(R.string.update_mode),
-                    items = modeOptions.map { stringResource(it.strRes) },
-                    selectedIndex = modeOptions.indexOf(formState.updateMode).coerceAtLeast(0)
+                    title = stringResource(R.string.query_strategy),
+                    items = strategyOptions.map { stringResource(it.strRes) },
+                    selectedIndex = strategyOptions.indexOf(formState.queryStrategy).coerceAtLeast(0)
                 ) {
-                    homeViewModel.onUpdateModeChange(modeOptions[it])
+                    homeViewModel.onQueryStrategyChange(strategyOptions[it])
                 }
             }
 
@@ -232,11 +315,11 @@ fun HomeScreen() {
                     .background(MiuixTheme.colorScheme.surface)
             ) {
                 SuperDropdown(
-                    title = stringResource(R.string.query_strategy),
-                    items = strategyOptions.map { stringResource(it.strRes) },
-                    selectedIndex = strategyOptions.indexOf(formState.queryStrategy).coerceAtLeast(0)
+                    title = stringResource(R.string.update_mode),
+                    items = modeOptions.map { stringResource(it.strRes) },
+                    selectedIndex = modeOptions.indexOf(formState.updateMode).coerceAtLeast(0)
                 ) {
-                    homeViewModel.onQueryStrategyChange(strategyOptions[it])
+                    homeViewModel.onUpdateModeChange(modeOptions[it])
                 }
             }
             

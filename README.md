@@ -17,26 +17,26 @@
 
 ## Android 查询策略
 
-当前 Android UI 已接入第一批 tracker 风格查询策略：
+当前 Android UI 已接入 tracker 风格查询策略与第二批高级参数：
 
 - `Normal`：普通查询
 - `Gray`：CN 灰度通道查询
 - `Anti`：反查询限制绕过
 - `GrayNew`：先 taste 探测、再切 gray 的追灰流程
+- `Genshin`：`Off / YS / Ovt` 前缀装饰
+- `Preview Query`：切换 `pre`
+- `GUID`：64 位十六进制设备标识
+- `Components`：增量 OTA 组件输入，格式为 `name:version,name:version`
 
 当前 UI 的联动规则如下：
 
 - 选择 `Anti` 后，查询模式会自动固定为 `taste`
 - 选择 `GrayNew` 后，表单中的查询模式会固定为稳定查询；内部仍由 Go 核心执行“taste -> gray”两阶段流程
 - 非 `CN` 区域不会显示 `Gray` 和 `GrayNew`
-- 搜索历史会保存并恢复查询策略与查询模式
-
-当前 Android UI 仍未开放以下高级参数：
-
-- `genshin`
-- `components`
-- `pre`
-- `guid`
+- 预览版查询与“直接选择 `Taste` 模式”的查询，都要求填写 64 位 `GUID`
+- `Anti` 与 `GrayNew` 虽然内部会走 taste 链路，但不会单独强制 `GUID`；只有同时启用 `Preview Query` 时才要求 `GUID`
+- `Genshin` 与 `Preview Query` 可同时开启，OTA 前缀装饰优先级遵循 Go 核心 / tracker：`YS / Ovt` 优先于 `PRE`
+- 搜索历史会保存并恢复查询策略、查询模式以及 `genshin / pre / guid / components`
 
 ## Project Layout
 
