@@ -18,7 +18,16 @@ object HistoryUtils {
         val otaVersion: String,
         val region: String,
         val model: String,
-        val carrier: String
+        val carrier: String,
+        val updateMode: String = "STABLE",
+        val queryStrategy: String = "NORMAL",
+        val grayEnabled: Boolean = false,
+        val antiEnabled: Boolean = false,
+        val grayNewEnabled: Boolean = false,
+        val genshinMode: String = "OFF",
+        val preEnabled: Boolean = false,
+        val guid: String = "",
+        val componentsInput: String = "",
     )
 
     fun saveHistory(context: Context, item: HistoryItem) {

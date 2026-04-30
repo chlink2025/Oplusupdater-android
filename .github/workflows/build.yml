@@ -58,7 +58,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: OplusUpdater/go.mod
 
       - name: Build Binary
         working-directory: OplusUpdater
@@ -89,7 +89,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: OplusUpdater/go.mod
 
       - name: Set up golang/mobile
         run: go install golang.org/x/mobile/cmd/gomobile@latest
@@ -103,9 +103,7 @@ jobs:
       - name: Build go bindings
         working-directory: OplusUpdater
         run: |
-          rm -f go.sum
           go mod tidy
-          go get golang.org/x/mobile/bind
           gomobile init
           CGO_CFLAGS="-O2 -g0" CGO_LDFLAGS="-s" gomobile bind -tags "no_debug" -target=android -androidapi 26 -v ./pkg/updater
 

@@ -1,11 +1,10 @@
 package com.houvven.oplusupdater.ui.screen.home.components
 
 import android.annotation.SuppressLint
-import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.annotation.Keep
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibility as ComposeAnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -26,11 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,15 +40,14 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
 import com.houvven.oplusupdater.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.BackHandler
-import java.net.HttpURLConnection
-import java.net.URL
 
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -63,28 +56,17 @@ fun UpdateLogDialog(
     show: Boolean,
     url: String,
     softwareVersion: String,
+    uiState: UpdateLogUiState,
+    onRetryRequest: () -> Unit,
     onDismissRequest: () -> Unit
 ) {
     val isDarkTheme = isSystemInDarkTheme()
-    var responseHtml by rememberSaveable { mutableStateOf("") }
-
-    LaunchedEffect(url) {
-        launch(Dispatchers.IO) {
-            Log.d("UpdateLogDialog", "startup get html")
-            val conn = URL(url).openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            val responseCode = conn.responseCode
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                responseHtml = conn.inputStream.bufferedReader().use { it.readText() }
-            }
-        }
-    }
 
     Popup(
         onDismissRequest = onDismissRequest,
         properties = PopupProperties(excludeFromSystemGesture = false)
     ) {
-        AnimatedVisibility(
+        ComposeAnimatedVisibility(
             visible = show,
             enter = slideInVertically(
                 initialOffsetY = { fullHeight -> fullHeight },
@@ -143,20 +125,71 @@ fun UpdateLogDialog(
                         )
                     }
 
-                    AndroidView(
-                        factory = {
-                            WebView(it).apply {
-                                setBackgroundColor(Color.Transparent.toArgb())
-                                // @formatter:off
-                                addJavascriptInterface(object { @JavascriptInterface @Keep @Suppress("unused") fun isNight(): Boolean = isDarkTheme }, "HeytapTheme")
-                                // @formatter:on
-                                settings.javaScriptEnabled = true
-                            }
-                        },
-                        update = {
-                            it.loadDataWithBaseURL(url, responseHtml, "text/html", "utf-8", null)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 26.dp, vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (uiState.responseHtml.isNotBlank() && !uiState.isLoading && uiState.loadError == null) {
+                            AndroidView(
+                                factory = { context ->
+                                    WebView(context).apply {
+                                        setBackgroundColor(Color.Transparent.toArgb())
+                                        // @formatter:off
+                                        addJavascriptInterface(object { @JavascriptInterface @Keep @Suppress("unused") fun isNight(): Boolean = isDarkTheme }, "HeytapTheme")
+                                        // @formatter:on
+                                        settings.javaScriptEnabled = true
+                                        settings.javaScriptCanOpenWindowsAutomatically = false
+                                        settings.allowFileAccess = false
+                                        settings.allowContentAccess = false
+                                    }
+                                },
+                                update = {
+                                    it.loadDataWithBaseURL(url, uiState.responseHtml, "text/html", "utf-8", null)
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                            )
                         }
-                    )
+
+                        if (uiState.isLoading || uiState.loadError != null || uiState.responseHtml.isBlank()) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (uiState.isLoading) {
+                                    InfiniteProgressIndicator(
+                                        color = MiuixTheme.colorScheme.primary,
+                                        size = 24.dp
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.update_log_loading),
+                                        color = MiuixTheme.colorScheme.onSurface
+                                    )
+                                } else if (uiState.loadError != null) {
+                                    Text(
+                                        text = stringResource(R.string.update_log_load_failed),
+                                        color = MiuixTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = uiState.loadError.orEmpty(),
+                                        color = if (isDarkTheme) Color.Gray else Color.DarkGray,
+                                        fontSize = 12.sp
+                                    )
+                                    Button(
+                                        onClick = onRetryRequest,
+                                        colors = ButtonDefaults.buttonColorsPrimary()
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.retry),
+                                            color = MiuixTheme.colorScheme.onPrimary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 IconButton(

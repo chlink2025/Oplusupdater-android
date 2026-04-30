@@ -20,12 +20,8 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,15 +32,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.houvven.oplusupdater.R
 import com.houvven.oplusupdater.ui.screen.home.components.AboutInfoDialog
 import com.houvven.oplusupdater.ui.screen.home.components.UpdateQueryResponseCard
 import com.houvven.oplusupdater.utils.toast
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -56,8 +49,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.extra.SuperDropdown
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import updater.ResponseResult
-import updater.Updater
 
 @Keep
 enum class OtaRegion(
@@ -82,6 +73,34 @@ enum class UpdateMode(
     TASTE(R.string.update_mode_taste, "taste")
 }
 
+@Keep
+enum class QueryStrategy(
+    @StringRes val strRes: Int,
+) {
+    NORMAL(R.string.query_strategy_normal),
+    GRAY(R.string.query_strategy_gray),
+    ANTI(R.string.query_strategy_anti),
+    GRAYNEW(R.string.query_strategy_graynew),
+}
+
+@Keep
+enum class GenshinMode(
+    @StringRes val strRes: Int,
+    val value: String
+) {
+    OFF(R.string.genshin_off, "0"),
+    YS(R.string.genshin_ys, "1"),
+    OVT(R.string.genshin_ovt, "2"),
+}
+
+fun supportsGrayOptions(region: OtaRegion): Boolean {
+    return region == OtaRegion.CN
+}
+
+fun requiresGuidForQuery(mode: UpdateMode, preEnabled: Boolean): Boolean {
+    return preEnabled || mode == UpdateMode.TASTE
+}
+
 @delegate:SuppressLint("PrivateApi")
 val systemOtaVersion: String by lazy {
     val clazz = Class.forName("android.os.SystemProperties")
@@ -91,60 +110,21 @@ val systemOtaVersion: String by lazy {
 
 @Composable
 fun HomeScreen() {
+    val homeViewModel: HomeViewModel = viewModel()
+    val uiState by homeViewModel.uiState.collectAsState()
+    val formState = uiState.formState
+    val modeOptions = UpdateMode.entries
+    val guidRequired = requiresGuidForQuery(
+        mode = formState.updateMode,
+        preEnabled = formState.preEnabled
+    )
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val coroutineScope = rememberCoroutineScope { Dispatchers.IO }
     val scrollState = rememberScrollState()
-    var showAboutInfoDialog by remember { mutableStateOf(false) }
-    var updateMode by rememberSaveable { mutableStateOf(UpdateMode.STABLE) }
-    var isQuerying by rememberSaveable { mutableStateOf(false) }
-    var expandMoreParameters by rememberSaveable { mutableStateOf(true) }
-    var otaVersion by rememberSaveable { mutableStateOf(systemOtaVersion) }
-    var model by rememberSaveable { mutableStateOf("") }
-    var carrier by rememberSaveable { mutableStateOf("") }
-    var otaRegion by rememberSaveable { mutableStateOf(OtaRegion.CN) }
-    var responseResult by remember { mutableStateOf<ResponseResult?>(null) }
-    val msgFlow = MutableSharedFlow<String>()
-    
-    // History state
-    var historyList by remember { mutableStateOf(emptyList<com.houvven.oplusupdater.utils.HistoryUtils.HistoryItem>()) }
-    
-    // Load history on start
-    LaunchedEffect(Unit) {
-        historyList = com.houvven.oplusupdater.utils.HistoryUtils.getHistory(context)
-    }
 
-    LaunchedEffect(otaVersion, otaRegion) {
-        otaVersion.split("_").firstOrNull()?.let {
-            if (it.isBlank()) {
-                model = ""
-                return@let
-            }
-            model = when (otaRegion) {
-                OtaRegion.EU -> it + "EEA"
-                OtaRegion.IN -> it + "IN"
-                else -> it
-            }
-        }
-    }
-
-    LaunchedEffect(otaRegion) {
-        carrier = Updater.getConfig(otaRegion.name).carrierID
-    }
-
-    LaunchedEffect(msgFlow) {
-        msgFlow.collectLatest {
-            withContext(Dispatchers.Main) { context.toast(it) }
-        }
-    }
-
-    LaunchedEffect(responseResult) {
-        responseResult?.run {
-            when (responseCode.toInt()) {
-                200 -> msgFlow.emit(context.getString(R.string.msg_query_success))
-                304 -> msgFlow.emit(context.getString(R.string.msg_no_update_available))
-                else -> msgFlow.emit("code: $responseCode, $errMsg")
-            }
+    LaunchedEffect(homeViewModel) {
+        homeViewModel.messages.collectLatest {
+            context.toast(it)
         }
     }
 
@@ -154,7 +134,7 @@ fun HomeScreen() {
                 title = stringResource(R.string.app_name),
                 actions = {
                     IconButton(onClick = {
-                        showAboutInfoDialog = true
+                        homeViewModel.showAboutInfoDialog()
                     }) {
                         Icon(
                             imageVector = Icons.Outlined.Info,
@@ -176,14 +156,14 @@ fun HomeScreen() {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             TextField(
-                value = otaVersion,
-                onValueChange = { otaVersion = it.trim() },
+                value = formState.otaVersion,
+                onValueChange = { homeViewModel.onOtaVersionChange(it.trim()) },
                 label = stringResource(R.string.ota_version),
                 trailingIcon = {
                     IconButton(
-                        onClick = { expandMoreParameters = !expandMoreParameters }
+                        onClick = { homeViewModel.toggleMoreParameters() }
                     ) {
-                        val icon = if (expandMoreParameters) {
+                        val icon = if (formState.expandMoreParameters) {
                             Icons.Outlined.ExpandLess
                         } else {
                             Icons.Outlined.ExpandMore
@@ -197,7 +177,7 @@ fun HomeScreen() {
                 }
             )
 
-            AnimatedVisibility(visible = expandMoreParameters) {
+            AnimatedVisibility(visible = formState.expandMoreParameters) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -207,19 +187,139 @@ fun HomeScreen() {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         TextField(
-                            value = model,
-                            onValueChange = { model = it.trim() },
+                            value = formState.model,
+                            onValueChange = { homeViewModel.onModelChange(it.trim()) },
                             modifier = Modifier
                                 .weight(1f),
                             label = stringResource(R.string.model)
                         )
                         TextField(
-                            value = carrier,
-                            onValueChange = { carrier = it.trim() },
+                            value = formState.carrier,
+                            onValueChange = { homeViewModel.onCarrierChange(it.trim()) },
                             modifier = Modifier
                                 .weight(1f),
                             label = stringResource(R.string.carrier)
                         )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MiuixTheme.colorScheme.surface)
+                        ) {
+                            SuperDropdown(
+                                title = stringResource(R.string.genshin),
+                                items = GenshinMode.entries.map { stringResource(it.strRes) },
+                                selectedIndex = GenshinMode.entries.indexOf(formState.genshinMode)
+                            ) {
+                                homeViewModel.onGenshinModeChange(GenshinMode.entries[it])
+                            }
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MiuixTheme.colorScheme.surface)
+                        ) {
+                            SuperDropdown(
+                                title = stringResource(R.string.preview_query),
+                                items = listOf(
+                                    stringResource(R.string.preview_disabled),
+                                    stringResource(R.string.preview_enabled)
+                                ),
+                                selectedIndex = if (formState.preEnabled) 1 else 0
+                            ) {
+                                homeViewModel.onPreEnabledChange(it == 1)
+                            }
+                        }
+                    }
+
+                    TextField(
+                        value = formState.guid,
+                        onValueChange = { homeViewModel.onGuidChange(it.trim()) },
+                        label = stringResource(R.string.guid)
+                    )
+
+                    if (guidRequired) {
+                        Text(
+                            text = stringResource(R.string.guid_required_hint),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    TextField(
+                        value = formState.componentsInput,
+                        onValueChange = { homeViewModel.onComponentsInputChange(it) },
+                        label = stringResource(R.string.components)
+                    )
+
+                    if (supportsGrayOptions(formState.otaRegion)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MiuixTheme.colorScheme.surface)
+                            ) {
+                                SuperDropdown(
+                                    title = stringResource(R.string.query_strategy_gray),
+                                    items = listOf(
+                                        stringResource(R.string.preview_disabled),
+                                        stringResource(R.string.preview_enabled)
+                                    ),
+                                    selectedIndex = if (formState.grayEnabled) 1 else 0
+                                ) {
+                                    homeViewModel.onGrayEnabledChange(it == 1)
+                                }
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MiuixTheme.colorScheme.surface)
+                            ) {
+                                SuperDropdown(
+                                    title = stringResource(R.string.query_strategy_graynew),
+                                    items = listOf(
+                                        stringResource(R.string.preview_disabled),
+                                        stringResource(R.string.preview_enabled)
+                                    ),
+                                    selectedIndex = if (formState.grayNewEnabled) 1 else 0
+                                ) {
+                                    homeViewModel.onGrayNewEnabledChange(it == 1)
+                                }
+                            }
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MiuixTheme.colorScheme.surface)
+                    ) {
+                        SuperDropdown(
+                            title = stringResource(R.string.query_strategy_anti),
+                            items = listOf(
+                                stringResource(R.string.preview_disabled),
+                                stringResource(R.string.preview_enabled)
+                            ),
+                            selectedIndex = if (formState.antiEnabled) 1 else 0
+                        ) {
+                            homeViewModel.onAntiEnabledChange(it == 1)
+                        }
                     }
                 }
             }
@@ -232,9 +332,9 @@ fun HomeScreen() {
                 SuperDropdown(
                     title = stringResource(R.string.region),
                     items = OtaRegion.entries.map { stringResource(it.strRes) },
-                    selectedIndex = OtaRegion.entries.indexOf(otaRegion)
+                    selectedIndex = OtaRegion.entries.indexOf(formState.otaRegion)
                 ) {
-                    otaRegion = OtaRegion.entries[it]
+                    homeViewModel.onRegionChange(OtaRegion.entries[it])
                 }
             }
 
@@ -245,68 +345,36 @@ fun HomeScreen() {
             ) {
                 SuperDropdown(
                     title = stringResource(R.string.update_mode),
-                    items = UpdateMode.entries.map { stringResource(it.strRes) },
-                    selectedIndex = UpdateMode.entries.indexOf(updateMode)
+                    items = modeOptions.map { stringResource(it.strRes) },
+                    selectedIndex = modeOptions.indexOf(formState.updateMode).coerceAtLeast(0)
                 ) {
-                    updateMode = UpdateMode.entries[it]
+                    homeViewModel.onUpdateModeChange(modeOptions[it])
                 }
             }
             
             // Search History View - placed before query button
             com.houvven.oplusupdater.ui.screen.home.components.SearchHistoryView(
-                historyList = historyList,
+                historyList = uiState.historyList,
                 onHistorySelect = { item ->
-                    otaVersion = item.otaVersion
-                    model = item.model
-                    carrier = item.carrier
-                    try {
-                        otaRegion = OtaRegion.valueOf(item.region)
-                    } catch (e: Exception) {
-                        // ignore invalid region
-                    }
+                    homeViewModel.applyHistoryItem(item)
                 },
                 onClearHistory = {
-                    com.houvven.oplusupdater.utils.HistoryUtils.clearHistory(context)
-                    historyList = emptyList()
+                    homeViewModel.clearHistory()
                 }
             )
 
             Button(
                 onClick = {
                     focusManager.clearFocus()
-                    val args = updater.QueryUpdateArgs().also {
-                        it.otaVersion = otaVersion
-                        it.region = otaRegion.name
-                        it.model = model
-                        it.nvCarrier = carrier
-                        it.mode = updateMode.value
-                    }
-                    // Save to history
-                    com.houvven.oplusupdater.utils.HistoryUtils.saveHistory(
-                        context,
-                        com.houvven.oplusupdater.utils.HistoryUtils.HistoryItem(otaVersion, otaRegion.name, model, carrier)
-                    )
-                    historyList = com.houvven.oplusupdater.utils.HistoryUtils.getHistory(context)
-                    
-                    coroutineScope.launch(Dispatchers.IO) {
-                        isQuerying = true
-                        try {
-                            responseResult = null
-                            responseResult = Updater.queryUpdate(args)
-                        } catch (e: Exception) {
-                            msgFlow.emit(e.message ?: e.stackTraceToString())
-                        } finally {
-                            isQuerying = false
-                        }
-                    }
+                    homeViewModel.queryUpdate()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
-                enabled = otaVersion.isNotBlank(),
+                enabled = formState.otaVersion.isNotBlank(),
                 colors = ButtonDefaults.buttonColorsPrimary(),
             ) {
-                if (isQuerying) {
+                if (uiState.isQuerying) {
                     InfiniteProgressIndicator(
                         color = MiuixTheme.colorScheme.onPrimary,
                         size = 20.dp
@@ -322,13 +390,13 @@ fun HomeScreen() {
                 }
             }
 
-            AnimatedVisibility(visible = responseResult != null) {
-                responseResult?.let { UpdateQueryResponseCard(it) }
+            AnimatedVisibility(visible = uiState.responseResult != null) {
+                uiState.responseResult?.let { UpdateQueryResponseCard(it) }
             }
 
-            if (showAboutInfoDialog) {
+            if (uiState.showAboutInfoDialog) {
                 AboutInfoDialog(
-                    onDismissRequest = { showAboutInfoDialog = false }
+                    onDismissRequest = { homeViewModel.hideAboutInfoDialog() }
                 )
             }
         }

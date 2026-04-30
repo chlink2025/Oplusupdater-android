@@ -39,11 +39,17 @@ func GenerateProtectedKey(key []byte, pubKey []byte) (string, error) {
 }
 
 func GenerateDefaultDeviceId() string {
-    bytes := make([]byte, 32) // 32 bytes * 2 hex chars/byte = 64 chars
-    if _, err := rand.Read(bytes); err != nil {
-        return strings.Repeat("0", 64)
-    }
-    return hex.EncodeToString(bytes)
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	randomBytes := make([]byte, 64)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return strings.Repeat("0", 64)
+	}
+
+	deviceID := make([]byte, 64)
+	for i, b := range randomBytes {
+		deviceID[i] = chars[int(b)%len(chars)]
+	}
+	return string(deviceID)
 }
 
 func GenerateDeviceId(imei string) string {

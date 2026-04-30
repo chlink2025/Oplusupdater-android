@@ -18,7 +18,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 9
-        versionName = "1.0.8"
+        versionName = "1.1.0-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)

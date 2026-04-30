@@ -1,0 +1,59 @@
+# Changelog
+
+## 1.1.0-dev
+
+- 重新对照 `OPlus-Tracker-main/tomboy_pro.py` 后，移除了 Android UI 中把 `gray / anti / graynew` 折叠成互斥单选策略的设计
+- 取消 `anti -> taste` 与 `graynew -> stable` 的表单层强锁定，改为保留独立 flags 与显式 `Update Mode`
+- 将 GUID 约束简化为 `pre` 或用户显式选择 `taste` 时必填，避免把 `anti / graynew` 的内部 taste 探测误判为表单必填 GUID
+- 搜索历史改为保存并恢复独立的 `gray / anti / graynew` 开关
+- Android UI 接入第二批高级查询参数：`genshin`、`pre`、`guid`、`components`
+- 为 direct taste / preview 查询补齐 64 位 `GUID` 必填与格式校验，并将高级参数纳入搜索历史恢复
+- 更新 `README.md`、`README_EN.md`、`SPEC.md` 与 `ARCHITECTURE.md`，明确 Android UI 的高级参数联动规则
+- 再次验证 Android `:app:assembleDebug`，确认新的表单参数可贯通到 `updater.aar`
+- Android UI 接入第一批查询策略参数：`gray`、`anti`、`graynew`
+- 将 `anti -> taste`、`graynew -> stable` 与“非 CN 区域不暴露 gray/graynew” 的联动规则收敛到 `HomeViewModel`
+- 新增 `UpdateQueryResponseCardViewModel`，将 OTA 元数据读取与组件下载 URL 解析从 `UpdateQueryResponseCard` 下沉出 Composable
+- 调整 `UpdateQueryResponseCard` 的绑定边界，改为在响应变化时统一派发加载事件，由状态层承接组件解析与 metadata 拉取
+- 新增 `UpdateLogViewModel`，将更新日志 HTML 的加载、缓存、错误与重试状态从 `UpdateLogDialog` 下沉出 Composable
+- 调整 `UpdateQueryResponseCard` 与 `UpdateLogDialog` 的交互边界，改为 UI 只分发事件、状态层负责日志加载
+- 为 `UpdateLogDialog` 补齐更新日志的加载/失败/重试三态，并收敛 `WebView` 的文件与内容访问权限
+- 补齐 `values-zh-rCN` 中的更新日志相关文案，并重新验证 Android `:app:assembleDebug`
+- 对齐 `OplusUpdater` OTA 主查询链路的基础协议行为
+- 为 Go 核心新增主查询构造单元测试，覆盖默认参数、请求头、请求体与 endpoint 选择
+- 为 `OplusUpdater/test` 增加在线 OTA 回归断言，锁定核心机型查询结果不回退到旧包
+- 补充 `IN / SG` 路径在线回归样本，验证显式 `Model` 与自定义 `NvCarrier` 场景
+- 为 Go 核心新增 `anti` 前缀策略，按 tracker 风格在 `taste` 模式下展开候选版本并返回最佳结果
+- 为 `updater` CLI 增加 `--anti`，并补充本地参数测试与 `RMX3301_IN` 在线回归样本
+- 为 Go 核心新增 tracker 风格的 CN `gray` host 切换，并为 CLI 增加 `--gray`
+- 为 `RMX5010_CN` 增加 `gray` 在线回归样本，锁定 CN 灰度主机查询不回退
+- 为 Go 核心新增 tracker 风格的 `graynew` taste-to-gray 双阶段策略，并为 CLI 增加 `--graynew`
+- 为 `PHP110_CN` 增加 `graynew` 在线回归样本，锁定前缀 graynew 查询结果
+- 为 Go 核心新增 tracker 风格的 `components` 请求体注入，并为 CLI 增加 `--components`
+- 为 `components` 解析与请求体构造补充本地单元测试
+- 为 Go 核心新增 tracker 风格的 `genshin` 前缀处理，补齐 `YS / Ovt / genshin 优先于 pre` 规则
+- 为 `updater` CLI 增加 `--genshin`，并补充本地参数测试与策略单测
+- 统一 `OplusUpdater` Go 模块路径、仓库内导入路径与 CI Go 版本来源
+- 修正 `OplusUpdater/README.md` 的安装说明、CLI 用法与当前协议字段描述
+- 为 `updater` CLI 补充 `guid/pre/language/rom-version/android-version/coloros-version/pipeline-key/operator/company-id` 等高级参数
+- 修复 `updater` CLI 在查询失败时可能对空结果调用 `PrettyPrint()` 的崩溃路径
+- 完成仓库基线审查，补充 `SPEC.md` 与 `ARCHITECTURE.md`
+- 重写根 `README.md`，新增 `README_EN.md`
+- 记录当前仓库结构、构建前提、技术债与后续更新建议
+- 验证 `OplusUpdater/`：
+  - `go test ./...` 通过
+  - `go vet ./...` 通过
+- 基线切换到 `go 1.26.2`，并升级核心依赖到当前可通过回归测试的版本
+- 重新执行 `go mod tidy` 与 `go test ./...`，确认 `go1.26.2` 下 Go 核心仍然稳定
+- 重新生成 `OplusUpdater/updater.aar` 与 `OplusUpdater/updater-sources.jar`
+- 修复 Android 侧对 `Updater.getConfig(region, gray)` 新签名的调用适配
+- 验证 Android `:app:assembleDebug` 通过，确认新的 Go 绑定可被 UI 层消费
+- 修复 `UpdateQueryResponseCard.kt` 中“所有组件复用第一个组件下载 URL”的问题，并让 `PartitionListView` 按组件使用各自的最终下载地址
+- 修复 `HomeScreen.kt` 中未 `remember` 的 `MutableSharedFlow`，避免重组后消息流实例漂移
+- 为 `HomeScreen` 引入最小 `HomeViewModel`，将查询执行、历史记录、结果状态与消息流从 Compose UI 中抽离
+- 为 Android app 补充 `lifecycle-viewmodel-compose` 依赖，支撑后续继续拆分 `HomeScreen` 状态职责
+- 将 `HomeScreen` 的表单输入态与查询参数组装进一步迁入 `HomeViewModel`，收敛 `otaVersion/model/carrier/region/mode` 的状态来源
+- 将 `AboutInfoDialog` 开关也迁入 `HomeViewModel`，进一步减少 `HomeScreen` 本地状态
+- 新增 `OplusUpdater/tools.go`，用工具依赖固定 `golang.org/x/mobile/bind`，避免 `go mod tidy` 后 `gomobile bind` 失效
+- 补充 `README.md`、`README_EN.md`、`SPEC.md` 与 `ARCHITECTURE.md` 的 `go1.26.2` / `gomobile` / Android 联调说明
+- 调整 README 定位为项目介绍，将审查结论收敛到架构文档
+- 在 `ARCHITECTURE.md` 中新增分阶段 To Do List，明确先修 OTA 查询正确性

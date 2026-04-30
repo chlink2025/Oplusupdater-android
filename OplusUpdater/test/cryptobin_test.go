@@ -2,9 +2,10 @@ package test
 
 import (
 	"fmt"
-	"github.com/Houvven/OplusUpdater/pkg/updater"
 	"github.com/deatil/go-cryptobin/cryptobin/rsa"
 	"testing"
+
+	"github.com/chlink2025/Oplusupdater-android/OplusUpdater/pkg/updater"
 )
 
 func TestRsaPublicKeyGen(t *testing.T) {
